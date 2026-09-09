@@ -1,5 +1,12 @@
 # MNP ERP — Production Flow Simulation
 
+## RB Pilot 0.1
+
+Run `node server.js` then open `http://localhost:8787/rb.html`.
+The RB page uses fictional samples, editable conversion/weight standards, explicit trial scrap rules, and browser-local immutable calculation snapshots. It does not reserve stock or connect to Supabase yet. `supabase/rb-draft.sql` is an unapplied draft with owner-only policies, not a production schema. Connection and authenticated integration require a Supabase project.
+
+Verification: `node --test rb-calc.test.mjs`. No real company Excel data is included in this public repository. VBA equivalence and production batch rounding rules remain to be validated.
+
 Functional prototype สำหรับยืนยัน workflow ก่อนสร้างระบบจริง:
 
 - รับ/ยืนยันคำสั่งซื้อและเปิดใบสั่งผลิต

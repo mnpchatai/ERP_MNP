@@ -1,0 +1,14 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RB • BOM ทดลอง</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="rb.css"></head><body>
+<header class="rb-header"><div><small>MNP ERP / RB PILOT 0.1</small><h1>BOM และใบวางแผนขึ้นรูปยาง</h1></div><a href="index.html">กลับ ERP</a></header>
+<main class="rb-main"><p class="notice">โหมดทดลอง • ข้อมูลสมมติ • บันทึกใน Browser เครื่องนี้ • ยังไม่ได้เชื่อม Supabase</p>
+<div class="cols"><section class="card"><h2>1. เลือกสินค้าและความต้องการ</h2><form id="plan">
+<label>สินค้า<select id="product"></select></label><label>อ้างอิงออเดอร์ / PI<input id="reference" required maxlength="80" value="DEMO-001"></label>
+<div class="fields"><label>จำนวน FG (ชุด)<input id="quantity" type="number" min="1" step="1" value="100" required></label><label>RB พร้อมใช้ (เส้น)<input id="stock" type="number" min="0" step="1" value="0" required></label></div>
+<h3>2. มาตรฐาน RB สำหรับการทดลอง</h3><div class="fields">
+<label>ชิ้นส่วนต่อ FG (ชิ้น/ชุด)<input id="perFg" type="number" min="1" step="1" value="2" required></label><label>ตัดได้ต่อ RB (ชิ้น/เส้น)<input id="yield" type="number" min="1" step="1" value="10" required></label>
+<label>น้ำหนัก RB (กรัม/เส้น)<input id="weight" type="number" min="0.001" step="any" value="100" required></label><label>เผื่อแกะหัว (กก./งาน)<input id="setup" type="number" min="0" step="any" value="3" required></label>
+<label>เผื่อข้อต่อ (%)<input id="joint" type="number" min="0" max="100" step="any" value="1" required></label><label>เผื่อเสียทั่วไป (%)<input id="scrap" type="number" min="0" max="100" step="any" value="2" required></label>
+<label>น้ำหนักต่อโม่ (กก.)<input id="batch" type="number" min="0.001" step="any" value="80" required></label><label>เพิ่มขั้นต่ำ (กก.)<input id="increment" type="number" min="0.001" step="any" value="10" required></label>
+</div><p class="muted">สมมติฐาน: เผื่อเสียทั้งสองประเภทคิดจากน้ำหนักสุทธิ เพิ่มแกะหัวครั้งเดียวเมื่อมีผลิต และปัดน้ำหนักขึ้นตามขั้นต่ำ ยังไม่ใช่กฎที่รับรองจาก VBA</p><button class="primary" type="submit">คำนวณ BOM</button></form></section>
+<section class="card"><h2>3. ผลคำนวณและใบวางแผน</h2><div id="result">กรอกข้อมูลแล้วกดคำนวณ</div><p id="feedback" role="status"></p><button id="save" disabled>บันทึกฉบับทดลอง</button> <button id="print" disabled>พิมพ์</button></section></div>
+<section class="card history"><h2>ใบวางแผนที่บันทึกไว้</h2><p class="muted">เก็บ snapshot ค่าคำนวณแต่ละครั้ง การแก้มาตรฐานไม่เปลี่ยนเอกสารย้อนหลัง</p><div id="history"></div></section></main><script type="module" src="rb.js"></script></body></html>
