@@ -1,0 +1,7 @@
+{
+  "name": "mnp-erp-pilot",
+  "private": true,
+  "version": "0.2.0",
+  "scripts": {"start": "node server.js", "build": "node tools/build-static.cjs", "test": "node --test rb-calc.test.mjs rb-excel.test.mjs"},
+  "dependencies": {"@supabase/supabase-js": "2.116.0"}
+}

@@ -1,12 +1,37 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const env = {...process.env};
+if (fs.existsSync(path.join(__dirname,'.env.local'))) {
+  for (const line of fs.readFileSync(path.join(__dirname,'.env.local'),'utf8').split(/\r?\n/)) {
+    const match = line.match(/^([A-Z_]+)=(.*)$/);
+    if (match && !env[match[1]]) env[match[1]] = match[2].trim();
+  }
+}
 
 const port = Number(process.env.PORT) || 8787;
 const types = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".mjs": "text/javascript; charset=utf-8" };
-const publicFiles = new Set(['index.html','app.js','styles.css','theme.css','rb.html','rb.js','rb.css','rb-calc.mjs']);
+const publicFiles = new Set(['index.html','app.js','styles.css','theme.css','rb.html','rb.js','rb.css','rb-calc.mjs','connect.html','connect.js','public-config.js']);
 
 http.createServer((request, response) => {
+  response.setHeader('X-Content-Type-Options','nosniff');
+  response.setHeader('Cache-Control','no-store');
+  if (!['GET','HEAD'].includes(request.method)) { response.writeHead(405).end(); return; }
+  if (request.url === '/api/public-config') {
+    const url = env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = env.SUPABASE_PUBLISHABLE_KEY || env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    if (!/^https:\/\/[a-z0-9]+\.supabase\.co$/.test(url || '') || !key?.startsWith('sb_publishable_')) {
+      response.writeHead(503).end('Missing public Supabase configuration'); return;
+    }
+    response.setHeader('Content-Type','application/json');
+    response.end(JSON.stringify({url,key})); return;
+  }
+  if (request.url === '/vendor/supabase.js') {
+    fs.readFile(path.join(__dirname,'node_modules/@supabase/supabase-js/dist/umd/supabase.js'),(error,content)=>{
+      if(error){response.writeHead(503).end('Run npm install first');return;}
+      response.setHeader('Content-Type','text/javascript');response.end(content);
+    }); return;
+  }
   const relative = request.url === "/" ? "index.html" : request.url.split("?")[0].replace(/^\/+/, "");
   const file = path.resolve(__dirname, relative);
   if (!publicFiles.has(relative)) {

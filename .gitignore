@@ -1,0 +1,7 @@
+.env
+.env.*
+!.env.example
+rb_inspect.py
+.private-tools/
+.private-rb/
+node_modules/
