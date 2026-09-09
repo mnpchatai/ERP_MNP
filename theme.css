@@ -1,0 +1,7 @@
+/* MNP palette: navy to pale cyan, based on the supplied reference swatch. */
+:root{color:#132f5b;background:#f3f8fb;--nav:#06085d;--green:#3975a8;--line:#d6e8ef;--muted:#607b91}
+body{background:linear-gradient(145deg,#f7fbfd,#edf6fa)}aside{background:linear-gradient(180deg,#06085d 0%,#173f78 62%,#3975a8 100%)}
+nav button:hover,nav button.active{background:linear-gradient(90deg,#214b86,#4388b5)}.stat,.card{border-radius:12px;box-shadow:0 8px 24px #173d6810}
+.primary{border-color:#3975a8!important;background:linear-gradient(135deg,#214b86,#4b91bb)!important}.badge.CONFIRMED,.badge.RELEASED,.badge.COMPLETED,.badge.DELIVERED{color:#154f78;background:#d4eff5}
+.timeline p{border-left-color:#62abc9}.bar i{background:linear-gradient(90deg,#32679b,#63b0cc)}.good{color:#286f9c}.hint{align-self:center;color:var(--muted);font-size:12px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #7fc5dc;outline-offset:2px}
