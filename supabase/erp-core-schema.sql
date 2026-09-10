@@ -464,7 +464,7 @@ create table if not exists public.gl_journal_lines (
 );
 
 create or replace function public.gl_check_balanced() returns trigger
-language plpgsql as $$
+language plpgsql set search_path = public as $$
 declare v_diff numeric;
 begin
   select coalesce(sum(debit),0) - coalesce(sum(credit),0) into v_diff
