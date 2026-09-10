@@ -1,4 +1,5 @@
 import {calculate} from './rb-calc.mjs';
+import {mountCatalog} from './rb-catalog.mjs';
 import {createAppClient,cloudError} from './supabase-client.mjs';
 import {saveCloudPlan,listCloudPlans,validateSnapshot} from './rb-cloud.mjs';
 const $=s=>document.querySelector(s),key='mnp-rb-pilot-v1';
@@ -108,6 +109,7 @@ $('#logout').onclick=async()=>{
 renderLocal();controls();
 try {
   client=createAppClient();
+  mountCatalog(client);
   client.auth.onAuthStateChange((_event,session)=>{setTimeout(()=>setUser(session?.user),0);});
   const {data,error}=await client.auth.getUser();
   setUser(error?null:data.user);

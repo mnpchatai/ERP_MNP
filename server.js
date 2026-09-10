@@ -11,7 +11,7 @@ if (fs.existsSync(path.join(__dirname,'.env.local'))) {
 
 const port = Number(process.env.PORT) || 8787;
 const types = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".mjs": "text/javascript; charset=utf-8" };
-const publicFiles = new Set(['index.html','app.js','styles.css','theme.css','rb.html','rb.js','rb.css','rb-calc.mjs','connect.html','connect.js','public-config.js','supabase-client.mjs','rb-cloud.mjs']);
+const publicFiles = new Set(['index.html','app.js','styles.css','theme.css','rb.html','rb.js','rb.css','rb-calc.mjs','connect.html','connect.js','public-config.js','supabase-client.mjs','rb-cloud.mjs','rb-catalog.mjs','catalog.css']);
 
 http.createServer((request, response) => {
   response.setHeader('X-Content-Type-Options','nosniff');
