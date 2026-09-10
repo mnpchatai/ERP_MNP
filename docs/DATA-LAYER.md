@@ -76,8 +76,49 @@ gl_account_defaults: anchor คงที่ (AR_CONTROL, AP_CONTROL, INVENTORY, 
 ## ลำดับที่แนะนำต่อจากนี้
 
 1. รีวิว schema นี้ร่วมกับทีมบัญชี/operation ว่าตรงกับ workflow จริงไหม
-2. Apply บนโปรเจกต์ Supabase ทดลอง (ไม่ใช่ของจริง) แล้วทดสอบ RLS ต่อ role
+2. ~~Apply บนโปรเจกต์ Supabase ทดลอง~~ ทำแล้ว ดูหัวข้อ "ทดสอบจริงแล้ว" ด้านล่าง
 3. Seed `gl_chart_of_accounts` และ `gl_account_defaults` ตามผังบัญชีจริงของบริษัท
 4. เขียน service layer (Node/API) ที่ post เอกสาร → stock ledger → GL ให้ atomic
    (transaction เดียว ไม่ใช่หลาย request แยกกัน)
 5. ค่อยย้าย UI ปัจจุบัน (app.js, mrp.html) จาก localStorage มาเรียก service นี้
+
+## ทดสอบจริงแล้ว (2026-09-10)
+
+Apply `erp-core-schema.sql` แล้วบนโปรเจกต์ Supabase **"mnpchatai's Project"**
+(`myqmqffoqbbbbdgacvhm`) — เลือกโปรเจกต์นี้เพราะองค์กรใช้โควตาโปรเจกต์ฟรีครบ 2/2
+แล้ว (ERP_MNP + โปรเจกต์นี้) สร้างโปรเจกต์ที่ 3 ไม่ได้ โปรเจกต์นี้มีตาราง `rb_*`
+ของแอปอื่นอยู่ก่อนแล้วแต่ไม่ชนกับ prefix ของเรา **ไม่ได้ apply กับโปรเจกต์
+ERP_MNP จริง** (`esxcwfrnoizftulqnudh`) ที่ `mrp.html`/`rb.html` ใช้งานอยู่
+
+ขั้นตอนที่ทำ:
+
+1. Apply `erp-core-schema.sql` — สร้างครบ 37 ตาราง, function, trigger, RLS policy
+2. รัน `get_advisors` (security) พบ 2 ปัญหาจากโค้ดเรา: (ก) `gl_check_balanced`
+   ไม่ได้ lock `search_path`, (ข) function security definer 4 ตัวเรียกผ่าน
+   `/rest/v1/rpc/...` ได้จาก `anon` เพราะ Postgres grant `EXECUTE` ให้ `PUBLIC`
+   เป็นค่าเริ่มต้นตอนสร้างฟังก์ชัน — revoke จาก role ที่ระบุชื่อ (`anon`)
+   อย่างเดียวไม่พอ ต้อง revoke จาก `PUBLIC` โดยตรง แก้แล้วใน
+   `erp-core-schema-hardening.sql` (2 รอบ กว่าจะเจอสาเหตุที่แท้จริง)
+3. ทดสอบ flow จริงด้วยข้อมูลชุดเดียวกับ seed ใน `app.js`: สร้าง item/BOM-03/
+   routing/MO ของ FG-1001 → รับวัตถุดิบเข้าคลัง (PO_RECEIPT) → เบิกเข้าใบสั่งผลิต
+   (MO_ISSUE) → รับสินค้าสำเร็จรูป (MO_RECEIPT) → เปิด SO → ลง GL แบบสมดุล →
+   ทดสอบว่า GL ไม่สมดุลแล้วโดนปฏิเสธจริง — **ผ่านทั้ง 6 การทดสอบ**:
+   - PO_RECEIPT สร้าง `qty_on_hand`/`avg_cost` ถูกต้อง (500 / 120)
+   - MO_ISSUE หักยอดถูกต้อง คง avg cost เดิม (456.74)
+   - MO_RECEIPT เพิ่มยอดสินค้าสำเร็จรูปถูกต้อง (10)
+   - บันทึก Sales Order + line ได้
+   - GL entry ที่ debit=credit ผ่าน (7,500 / 7,500)
+   - GL entry ที่ไม่สมดุล (debit 100, ไม่มี credit) ถูก `gl_check_balanced`
+     ปฏิเสธจริงเมื่อ `SET CONSTRAINTS ... IMMEDIATE`
+4. รัน `get_advisors` ซ้ำหลังแก้ — เหลือ warning ที่ไม่เกี่ยวกับ schema ของเรา:
+   `rb_touch_updated_at` (function ของแอป rb_* เดิมในโปรเจกต์นี้ ไม่ใช่ของเรา),
+   `auth_leaked_password_protection` (ตั้งค่า Auth ระดับโปรเจกต์ ไม่เกี่ยว schema),
+   `auth_allow_anonymous_sign_ins` ต่อทุกตาราง (เป็น warning มาตรฐานเมื่อมี
+   policy ให้ role `authenticated` ร่วมกับฟีเจอร์ anonymous sign-in ของ
+   Supabase Auth — เป็นการตัดสินใจระดับโปรเจกต์ ไม่ใช่จุดบกพร่องของ schema),
+   และ `org_has_role`/`org_is_admin`/`mst_next_doc_no` ยังเรียกได้จาก
+   `authenticated` ซึ่ง**ตั้งใจให้เป็นแบบนั้น** (ผู้ใช้ที่ล็อกอินแล้วต้องเรียก
+   ฟังก์ชันเหล่านี้ได้จริงตามที่ policy อื่นๆ ต้องพึ่งพา)
+
+ยังไม่ได้ apply กับโปรเจกต์ ERP_MNP จริง และยังไม่มี service layer ต่อจาก UI —
+ทดสอบนี้ยืนยันแค่ว่า schema/RLS/trigger ทำงานถูกต้องตามที่ออกแบบไว้เท่านั้น
