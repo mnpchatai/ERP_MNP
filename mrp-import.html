@@ -7,13 +7,18 @@
 
 <section class="card"><h2>1. เข้าสู่ระบบ</h2>
   <p id="auth-status" role="status">กำลังตรวจบัญชี…</p>
-  <form id="login"><div class="fields">
-    <label>อีเมล<input id="email" type="email" autocomplete="username" required></label>
-    <label>รหัสผ่าน<input id="password" type="password" autocomplete="current-password" required></label>
-  </div><button id="signin" class="primary">เข้าสู่ระบบ</button></form>
+  <form id="login">
+    <label>อีเมล<input id="email" type="email" autocomplete="username" required placeholder="you@example.com"></label>
+    <label id="password-row" hidden>รหัสผ่าน<input id="password" type="password" autocomplete="current-password"></label>
+    <div class="actions">
+      <button id="send-link" class="primary" type="submit">ส่งลิงก์เข้าสู่ระบบทางอีเมล</button>
+      <button id="use-password" type="button">ใช้รหัสผ่านแทน</button>
+    </div>
+  </form>
   <button id="logout" hidden>ออกจากระบบ</button>
-  <p class="muted">ยังไม่มีบัญชี ให้สร้างผู้ใช้ใน Supabase → Authentication → Users แล้วรัน<br>
-  <code>insert into public.mrp_admins(user_id, note) values ('&lt;user id&gt;', 'MRP admin');</code></p>
+  <p class="muted">กรอกแค่อีเมล แล้วกดลิงก์ที่ส่งไปในเมลเพื่อเข้าสู่ระบบ — ลิงก์ใช้ได้ครั้งเดียวและต้องเปิดในเบราว์เซอร์เดียวกับที่ขอ<br>
+  ยังไม่มีบัญชี ให้สร้างผู้ใช้ที่ Supabase → Authentication → Users แล้วรัน
+  <code>insert into public.mrp_admins(user_id, note) select id, 'MRP admin' from auth.users where email = '&lt;อีเมล&gt;';</code></p>
 </section>
 
 <section class="card"><h2>2. เลือกไฟล์ CSV ของชีต DATA</h2>

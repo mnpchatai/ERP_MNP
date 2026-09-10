@@ -29,3 +29,39 @@ test('passes an unrecognised message through instead of hiding it', () => {
 test('still says something useful when there is no message at all', () => {
   assert.match(authError(undefined), /เข้าสู่ระบบไม่สำเร็จ/);
 });
+
+import {linkError, linkCallbackError} from './supabase-client.mjs';
+
+test('magic link: says the address has no account rather than "check your password"', () => {
+  assert.match(linkError({status: 422, message: 'Signups not allowed for otp'}), /ไม่พบบัญชีของอีเมลนี้/);
+});
+
+test('magic link: names the free-tier email limit when throttled', () => {
+  assert.match(linkError({status: 429, message: 'For security purposes, you can only request this after 51 seconds'}), /ถี่เกินไป/);
+});
+
+test('magic link: points at the redirect allowlist when the URL is rejected', () => {
+  assert.match(linkError({message: 'Redirect URL not allowed'}), /Redirect URLs/);
+});
+
+test('magic link: points at SMTP when the mail itself fails', () => {
+  assert.match(linkError({message: 'Error sending magic link email'}), /SMTP/);
+});
+
+test('magic link: passes an unknown message through', () => {
+  assert.match(linkError({message: 'Something new from GoTrue'}), /Something new from GoTrue/);
+});
+
+test('callback: an expired link asks for a new one', () => {
+  const hash = '#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired';
+  assert.match(linkCallbackError(hash), /หมดอายุ/);
+});
+
+test('callback: a clean return reports no problem', () => {
+  assert.equal(linkCallbackError('#access_token=abc&type=magiclink'), null);
+  assert.equal(linkCallbackError(''), null);
+});
+
+test('callback: an unrecognised error still surfaces its description', () => {
+  assert.match(linkCallbackError('#error=server_error&error_description=Database+error'), /Database error/);
+});
