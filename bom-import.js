@@ -1,7 +1,8 @@
 import {createAppClient} from './supabase-client.mjs';
+import {config} from './public-config.js';
 
 const importId='b3ebb2a0-5728-427d-b047-ffe1c8aa8595';
-const endpoint='https://ijwutauepgelxonbjvnn.supabase.co/functions/v1/import-bom-source';
+const endpoint=`${config.url}/functions/v1/import-bom-source`;
 const $=id=>document.getElementById(id); const file=$('file'), start=$('start'), status=$('status'), auth=$('auth'), progress=$('progress');
 const client=createAppClient(); let session=null;
 async function init(){ const result=await client.auth.getSession(); session=result.data.session; if(session){auth.textContent=`เข้าสู่ระบบแล้ว: ${session.user.email}`; start.disabled=false;} else auth.textContent='ยังไม่ได้เข้าสู่ระบบ กรุณาเข้าสู่ระบบที่หน้า RB ก่อน'; }

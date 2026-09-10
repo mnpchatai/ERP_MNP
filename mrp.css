@@ -1,0 +1,28 @@
+/* MAIN sheet workspace. Wide read-only grids plus one editable staging grid. */
+.mrp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:4px 16px}
+.mrp-grid label{margin:8px 0}
+.card .head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.card .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+label.inline{display:inline-grid;max-width:280px}
+.scroll{overflow:auto;max-height:60vh}
+.scroll table{border-collapse:collapse;font-size:13px;white-space:nowrap}
+.scroll th,.scroll td{border:1px solid var(--line);padding:4px 8px;text-align:left;vertical-align:top}
+.scroll thead th{position:sticky;top:0;z-index:1;background:#e8f3f8;font-weight:600}
+.scroll thead th small{display:block;font-weight:400;color:var(--muted);font-size:11px}
+.scroll td.wide{white-space:normal;min-width:320px;max-width:520px}
+.scroll tbody tr:nth-child(even){background:#fafdff}
+.scroll td[contenteditable]{background:#fffdf3;cursor:text}
+.scroll td[contenteditable]:focus{outline:2px solid #7fc5dc;outline-offset:-2px;background:#fff}
+.scroll td.rownum,.scroll td.act{white-space:nowrap;color:var(--muted);text-align:right}
+.scroll td.act button{padding:2px 8px;font-size:12px;margin:0}
+.bom-header{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px 16px;margin:8px 0 14px;font-size:13px}
+.bom-header b{display:block;color:var(--muted);font-weight:500;font-size:12px}
+.empty{color:var(--muted);padding:14px 0}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#06085d;color:#fff;padding:10px 18px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+#toast.show{opacity:1}
+#qty-dialog{border:none;border-radius:12px;padding:20px;max-width:420px;box-shadow:0 18px 48px #173d6840}
+#qty-dialog::backdrop{background:#0a1c3a66}
+.wide{width:100%}
+.dept-sum td:last-child,.dept-sum td:nth-child(3){text-align:right}
+@media print{.rb-header a,.notice,.actions,label.inline,#pick-card,#edit-card,#header-card,#dept-card,#toast{display:none!important}
+.scroll{max-height:none;overflow:visible}.card{box-shadow:none}body{background:#fff}}

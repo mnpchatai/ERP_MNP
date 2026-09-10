@@ -21,3 +21,17 @@ endpoint /api/public-config เดิมยังมีใน local server แ�
 ที่ scope ไปโปรเจกต์นี้ แต่ OAuth ต้องทำผ่านหน้าต่างเชื่อมบัญชีด้วยตัวคุณเอง
 การมีไฟล์นี้ไม่ได้ยืนยันว่า Codex โหลดหรือ authenticate MCP แล้ว
 ไม่ต้องส่งรหัสผ่านฐานข้อมูลหรือ secret key ในแชต
+
+## โปรเจกต์ที่ใช้อยู่
+
+ตั้งแต่รุ่นนี้ `public-config.js` ชี้ไปโปรเจกต์ `ERP_MNP`
+(`https://esxcwfrnoizftulqnudh.supabase.co`) แล้ว การผูกกับโปรเจกต์เดิมถูกยกเลิก
+ทั้งหมด ไม่มีโค้ดหรือเอกสารส่วนใดอ้างถึงโปรเจกต์เดิมอีก
+
+ตารางบนโปรเจกต์นี้:
+
+| ตาราง | ใช้ที่ | สคีมา |
+|---|---|---|
+| `mrp_bom_data`, `mrp_departments`, `mrp_customers`, `mrp_packages`, `mrp_color_sets`, `mrp_admins` | `mrp.html`, `mrp-import.html` | `supabase/mrp-data-setup.sql` |
+| `rb_trial_plans` | `rb.html`, `connect.html` | `supabase/rb-cloud-setup.sql` |
+| `rb_item_catalog` | `rb.html` | `supabase/rb-item-catalog.sql` |

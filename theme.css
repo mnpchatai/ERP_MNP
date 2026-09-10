@@ -5,3 +5,6 @@ nav button:hover,nav button.active{background:linear-gradient(90deg,#214b86,#438
 .primary{border-color:#3975a8!important;background:linear-gradient(135deg,#214b86,#4b91bb)!important}.badge.CONFIRMED,.badge.RELEASED,.badge.COMPLETED,.badge.DELIVERED{color:#154f78;background:#d4eff5}
 .timeline p{border-left-color:#62abc9}.bar i{background:linear-gradient(90deg,#32679b,#63b0cc)}.good{color:#286f9c}.hint{align-self:center;color:var(--muted);font-size:12px}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #7fc5dc;outline-offset:2px}
+/* Sidebar entry for the MAIN (MRP) page, which is a separate document rather than a view. */
+nav a.nav-link{padding:12px 14px;border-radius:7px;color:#c8d7e5;text-decoration:none;font-size:inherit}
+nav a.nav-link:hover{background:linear-gradient(90deg,#214b86,#4388b5)}

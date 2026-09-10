@@ -11,7 +11,9 @@ if (fs.existsSync(path.join(__dirname,'.env.local'))) {
 
 const port = Number(process.env.PORT) || 8787;
 const types = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".mjs": "text/javascript; charset=utf-8" };
-const publicFiles = new Set(['index.html','app.js','styles.css','theme.css','rb.html','rb.js','rb.css','rb-calc.mjs','connect.html','connect.js','public-config.js','supabase-client.mjs','rb-cloud.mjs','rb-catalog.mjs','catalog.css']);
+const publicFiles = new Set(['index.html','app.js','styles.css','theme.css','rb.html','rb.js','rb.css','rb-calc.mjs','connect.html','connect.js','public-config.js','supabase-client.mjs','rb-cloud.mjs','rb-catalog.mjs','catalog.css',
+  'mrp.html','mrp.js','mrp.css','mrp-data.mjs','mrp-csv.mjs','mrp-import.html','mrp-import.js',
+  'bom-import.html','bom-import.js']);
 
 http.createServer((request, response) => {
   response.setHeader('X-Content-Type-Options','nosniff');
@@ -27,9 +29,14 @@ http.createServer((request, response) => {
     response.end(JSON.stringify({url,key})); return;
   }
   if (request.url === '/vendor/supabase.js') {
+    // Prefer the installed SDK; fall back to the vendored copy the Pages build ships,
+    // so the app still runs in a checkout that has not had npm install.
     fs.readFile(path.join(__dirname,'node_modules/@supabase/supabase-js/dist/umd/supabase.js'),(error,content)=>{
-      if(error){response.writeHead(503).end('Run npm install first');return;}
-      response.setHeader('Content-Type','text/javascript');response.end(content);
+      if(!error){response.setHeader('Content-Type','text/javascript');response.end(content);return;}
+      fs.readFile(path.join(__dirname,'vendor/supabase.js'),(fallbackError,vendored)=>{
+        if(fallbackError){response.writeHead(503).end('Run npm install or npm run build first');return;}
+        response.setHeader('Content-Type','text/javascript');response.end(vendored);
+      });
     }); return;
   }
   const relative = request.url === "/" ? "index.html" : request.url.split("?")[0].replace(/^\/+/, "");
