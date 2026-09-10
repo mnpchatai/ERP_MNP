@@ -98,7 +98,8 @@ ERP_MNP จริง** (`esxcwfrnoizftulqnudh`) ที่ `mrp.html`/`rb.html` �
    `/rest/v1/rpc/...` ได้จาก `anon` เพราะ Postgres grant `EXECUTE` ให้ `PUBLIC`
    เป็นค่าเริ่มต้นตอนสร้างฟังก์ชัน — revoke จาก role ที่ระบุชื่อ (`anon`)
    อย่างเดียวไม่พอ ต้อง revoke จาก `PUBLIC` โดยตรง แก้แล้วใน
-   `erp-core-schema-hardening.sql` (2 รอบ กว่าจะเจอสาเหตุที่แท้จริง)
+   `erp-core-schema-hardening.sql` (2 รอบ กว่าจะเจอสาเหตุที่แท้จริงบนโปรเจกต์นี้ —
+   ดูหัวข้อ "Apply กับ ERP_MNP จริง" ด้านล่าง เพราะยังไม่ใช่สาเหตุที่ถูกต้องทั้งหมด)
 3. ทดสอบ flow จริงด้วยข้อมูลชุดเดียวกับ seed ใน `app.js`: สร้าง item/BOM-03/
    routing/MO ของ FG-1001 → รับวัตถุดิบเข้าคลัง (PO_RECEIPT) → เบิกเข้าใบสั่งผลิต
    (MO_ISSUE) → รับสินค้าสำเร็จรูป (MO_RECEIPT) → เปิด SO → ลง GL แบบสมดุล →
@@ -120,5 +121,40 @@ ERP_MNP จริง** (`esxcwfrnoizftulqnudh`) ที่ `mrp.html`/`rb.html` �
    `authenticated` ซึ่ง**ตั้งใจให้เป็นแบบนั้น** (ผู้ใช้ที่ล็อกอินแล้วต้องเรียก
    ฟังก์ชันเหล่านี้ได้จริงตามที่ policy อื่นๆ ต้องพึ่งพา)
 
-ยังไม่ได้ apply กับโปรเจกต์ ERP_MNP จริง และยังไม่มี service layer ต่อจาก UI —
-ทดสอบนี้ยืนยันแค่ว่า schema/RLS/trigger ทำงานถูกต้องตามที่ออกแบบไว้เท่านั้น
+ตอนที่เขียนหัวข้อนี้ครั้งแรกยังไม่ได้ apply กับโปรเจกต์ ERP_MNP จริง — ตอนนี้ apply แล้ว
+ดูหัวข้อถัดไป
+
+## Apply กับ ERP_MNP จริงแล้ว (2026-09-10, ตามคำขอของผู้ใช้)
+
+Apply `erp-core-schema.sql` + `erp-core-schema-hardening.sql` เข้าโปรเจกต์ Supabase
+จริง **ERP_MNP** (`esxcwfrnoizftulqnudh`) ที่ `mrp.html`/`rb.html` ใช้งานอยู่ ตรวจ
+`list_tables` ก่อน apply แล้วว่าไม่ชนกับตารางเดิม (`mrp_bom_data` 31,302 แถว,
+`mrp_customers` 176 แถว ฯลฯ ยังอยู่ครบ ไม่ถูกแตะต้อง) เพิ่มแค่ 37 ตารางใหม่ตาม prefix
+ของเรา ไม่ได้รัน functional test ด้วยข้อมูลปลอมกับโปรเจกต์จริง (ต่างจากตอนทดสอบบน
+scratch project) เพราะ logic ผ่านการทดสอบแล้วรอบก่อนหน้า
+
+**พบว่าคำอธิบายสาเหตุใน `erp-core-schema-hardening.sql` เดิมไม่ครบ**: บนโปรเจกต์
+ERP_MNP จริง หลัง apply `erp-core-schema-hardening.sql` (revoke จาก `PUBLIC`) แล้ว
+`get_advisors` ยังฟ้องว่า `anon` เรียก `org_has_role`/`org_is_admin`/
+`mst_next_doc_no`/`inv_apply_stock_ledger` ได้อยู่ — ตรวจ `pg_proc.proacl` ตรงๆ
+พบว่าโปรเจกต์ Supabase มี `ALTER DEFAULT PRIVILEGES ... GRANT EXECUTE ON
+FUNCTIONS TO anon, authenticated, service_role` ตั้งไว้เป็นค่าเริ่มต้น (มาตรฐานของ
+Supabase สำหรับ expose function ผ่าน PostgREST) — grant นี้ให้สิทธิ์ตรงกับ role
+`anon`/`authenticated` โดยชื่อ ไม่ได้ผ่าน `PUBLIC` เลย ดังนั้น revoke จาก `PUBLIC`
+อย่างเดียวจึงไม่พอ ต้อง `revoke ... from anon, authenticated` ตรงๆ ด้วย แก้แล้วทั้งใน
+production (migration `erp_core_schema_hardening_2`) และแก้ไฟล์ในโค้ดให้ถูกต้อง
+ยืนยันด้วยการอ่าน `pg_proc.proacl` ตรงๆ ก่อน-หลัง ไม่ใช่แค่เชื่อ `get_advisors`
+อย่างเดียว (เพราะผลลัพธ์ของ `get_advisors` มี cache lag)
+
+ผลตรวจสุดท้ายบน ERP_MNP จริง:
+- `inv_apply_stock_ledger`: เหลือแค่ `postgres`/`service_role` — เรียกตรงไม่ได้แล้ว
+- `org_has_role`/`org_is_admin`/`mst_next_doc_no`: เหลือ `authenticated` (ตั้งใจ)
+- `is_mrp_admin` ที่ยังโดน `get_advisors` ฟ้องว่า `anon` เรียกได้ — เป็น function
+  เดิมของ `mrp-data-setup.sql` ที่มีอยู่ก่อนเรา ไม่ใช่สิ่งที่เราเพิ่ม ไม่ได้แก้ให้
+  (นอกขอบเขตงานนี้ ถ้าต้องการแก้ให้แจ้งแยกต่างหาก)
+- `auth_leaked_password_protection` — ตั้งค่า Auth ระดับโปรเจกต์ ไม่เกี่ยว schema
+
+**ยังไม่มี**: seed ผังบัญชี/`gl_account_defaults` จริง, service layer ที่ post
+เอกสาร → ledger → GL, และยังไม่ได้ย้าย UI (`app.js`, `mrp.html`) มาเรียก schema นี้
+ตารางใหม่ทั้งหมดว่างเปล่า (0 แถว) รอการเชื่อมต่อจาก service layer ตามลำดับที่แนะนำ
+ด้านบน
