@@ -1,0 +1,71 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MAIN • คำนวณวัตถุดิบ (MRP)</title>
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="rb.css"><link rel="stylesheet" href="mrp.css"></head><body>
+<header class="rb-header"><div><small>MNP ERP / MATERIAL M&amp;P MRP 4.1</small><h1>MAIN — แจ้งปริมาณความต้องการวัตถุดิบ</h1></div><a href="index.html">กลับ ERP</a></header>
+<main class="rb-main">
+<p class="notice" id="source-note">ฐานข้อมูลชีต DATA คอลัมน์ A–U • แผนกอ้างอิงคอลัมน์ L แผนกผู้ผลิต • กำลังเชื่อมฐานข้อมูล…</p>
+
+<section class="card" id="header-card">
+  <div class="head"><h2>ข้อมูลลูกค้าและกำหนดการผลิต</h2></div>
+  <div class="mrp-grid">
+    <label>ชื่อลูกค้า<select id="customer"></select></label>
+    <label>เลขที่เอกสาร PI<input id="pi" maxlength="40" placeholder="เช่น 260701-26030"></label>
+    <label>แก้ไขฉบับที่<input id="rev" maxlength="10" value="0"></label>
+    <label>ประเทศ<input id="country" maxlength="40" value="Thailand"></label>
+    <label>ประเภทออร์เดอร์<input id="order-type" readonly tabindex="-1"></label>
+    <label>วันที่สั่งผลิต<input id="d-order" type="date"></label>
+    <label>วันส่งมอบ-WH<input id="d-wh" type="date"></label>
+    <label>กำหนดผลิตเสร็จ RB<input id="d-rb" type="date"></label>
+    <label>กำหนดผลิตเสร็จ GR<input id="d-gr" type="date"></label>
+    <label>กำหนดผลิตเสร็จ PT<input id="d-pt" type="date"></label>
+    <label>กำหนดผลิตเสร็จ BG<input id="d-bg" type="date"></label>
+    <label>กำหนดผลิตเสร็จ ST<input id="d-st" type="date"></label>
+    <label>กำหนดของเข้า PK<input id="d-pk" type="date"></label>
+  </div>
+  <div class="actions"><button id="apply-header" class="primary">เพิ่มข้อมูล</button><span class="muted" id="header-status"></span></div>
+</section>
+
+<section class="card" id="pick-card">
+  <div class="head"><h2>ITEM สินค้า</h2></div>
+  <div class="mrp-grid">
+    <label>ITEM<select id="item"></select></label>
+    <label>Package<select id="package"></select></label>
+    <label>Set of Color<select id="colorset"></select></label>
+    <label>CODE ที่จะบันทึก<input id="composed" readonly tabindex="-1"></label>
+  </div>
+  <div class="actions">
+    <button id="filter" class="primary">กรองข้อมูล</button>
+    <button id="add-item" disabled>เพิ่มจำนวน</button>
+    <span class="muted" id="pick-status">เลือก ITEM แล้วกดกรองข้อมูล</span>
+  </div>
+</section>
+
+<section class="card" id="edit-card">
+  <div class="head"><div><h2>แก้ไขชิ้นส่วนสินค้าก่อนเพิ่มรายการ</h2>
+  <p class="muted">คอลัมน์ A–U ตามชีต DATA หัวข้อเดิมทุกช่อง • แก้ไขในตารางได้ก่อนกดเพิ่มจำนวน • การแก้ไขที่นี่ไม่เขียนทับฐานข้อมูล</p></div>
+  <div class="actions"><button id="edit-clear">ล้างตาราง</button></div></div>
+  <label class="inline">กรองแผนกผู้ผลิต<select id="edit-dept"><option value="ALL">ทุกแผนก</option></select></label>
+  <div class="scroll" id="edit-wrap"><p class="empty">ยังไม่ได้กรองข้อมูล</p></div>
+</section>
+
+<section class="card" id="bom-card">
+  <div class="head"><div><h2>BOMSHEET — รายการที่เพิ่มแล้ว</h2>
+  <p class="muted">เก็บใน Browser เครื่องนี้เท่านั้น เหมือนชีต BOMSHEET ในไฟล์ Excel • ฐานข้อมูล DATA เป็นแบบอ่านอย่างเดียว</p></div>
+  <div class="actions"><button id="bom-print">พิมพ์</button><button id="bom-export">บันทึก CSV</button><button id="bom-clear">ล้าง BOMSHEET</button></div></div>
+  <div id="bom-header" class="bom-header"></div>
+  <label class="inline">กรองแผนกผู้ผลิต<select id="bom-dept"><option value="ALL">ทุกแผนก</option></select></label>
+  <div class="scroll" id="bom-wrap"><p class="empty">ยังไม่มีรายการใน BOMSHEET</p></div>
+</section>
+
+<section class="card" id="dept-card">
+  <div class="head"><h2>สรุปแผนกผู้ผลิต (คอลัมน์ L)</h2></div>
+  <div class="scroll" id="dept-wrap"><p class="empty">กำลังโหลด…</p></div>
+</section>
+</main>
+<dialog id="qty-dialog"><form method="dialog" id="qty-form">
+  <div class="head"><div><h2>ระบุจำนวนสั่ง</h2><p class="muted" id="qty-note"></p></div><button value="cancel" type="submit">✕</button></div>
+  <label>กรุณากรอกจำนวนสั่งของรายการนี้<input id="qty" type="number" min="0.0001" step="any" value="1" required></label>
+  <button value="ok" type="submit" class="primary wide">เพิ่มเข้า BOMSHEET</button>
+</form></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="mrp.js"></script></body></html>
