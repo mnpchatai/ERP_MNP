@@ -6,8 +6,13 @@ import {parseCsv, checkHeader} from './mrp-csv.mjs';
 
 const $ = s => document.querySelector(s);
 const BATCH = 500;
-const client = createAppClient();
 let user = null, admin = false, rows = null, running = false;
+
+// Choosing a file and checking its headers needs no network, so a failed SDK load
+// must not take the whole page down with it.
+let client = null, clientError = null;
+try { client = createAppClient(); }
+catch (error) { clientError = error.message; }
 
 const say = text => { $('#status').textContent = text; };
 function toast(message) {
@@ -15,9 +20,9 @@ function toast(message) {
   clearTimeout(toast.timer); toast.timer = setTimeout(() => { $('#toast').className = ''; }, 2600);
 }
 function controls() {
-  $('#login').hidden = !!user;
+  $('#login').hidden = !!user || !client;
   $('#logout').hidden = !user;
-  $('#start').disabled = running || !user || !admin || !rows?.length;
+  $('#start').disabled = running || !client || !user || !admin || !rows?.length;
 }
 async function signedIn(next) {
   user = next || null; admin = false;
@@ -113,5 +118,10 @@ $('#start').onclick = async () => {
   } finally { running = false; controls(); }
 };
 
-client.auth.onAuthStateChange((_event, session) => { signedIn(session?.user); });
-client.auth.getUser().then(({data}) => signedIn(data?.user)).catch(() => signedIn(null));
+if (client) {
+  client.auth.onAuthStateChange((_event, session) => { signedIn(session?.user); });
+  client.auth.getUser().then(({data}) => signedIn(data?.user)).catch(() => signedIn(null));
+} else {
+  $('#auth-status').textContent = clientError;
+  controls();
+}
