@@ -1,6 +1,6 @@
 // Admin-only loader for sheet DATA columns A-U. Reads the CSV in the browser and
 // writes straight to Supabase, so no company data passes through this repository.
-import {createAppClient, cloudError} from './supabase-client.mjs';
+import {createAppClient, cloudError, authError, linkError, linkCallbackError} from './supabase-client.mjs';
 import {COLUMNS, FIELDS} from './mrp-data.mjs';
 import {parseCsv, checkHeader} from './mrp-csv.mjs';
 
@@ -11,7 +11,8 @@ let user = null, admin = false, rows = null, running = false;
 // Choosing a file and checking its headers needs no network, so a failed SDK load
 // must not take the whole page down with it.
 let client = null, clientError = null;
-try { client = createAppClient(); }
+// detectSessionInUrl: the magic link returns with the session in the fragment.
+try { client = createAppClient({detectSessionInUrl: true}); }
 catch (error) { clientError = error.message; }
 
 const say = text => { $('#status').textContent = text; };
@@ -24,27 +25,58 @@ function controls() {
   $('#logout').hidden = !user;
   $('#start').disabled = running || !client || !user || !admin || !rows?.length;
 }
+// The password field only appears if someone asks for it; email alone is the
+// normal path, so nothing about it is required until it is visible.
+let usePassword = false;
+function passwordMode(on) {
+  usePassword = on;
+  $('#password-row').hidden = !on;
+  $('#password').required = on;
+  $('#send-link').textContent = on ? 'เข้าสู่ระบบ' : 'ส่งลิงก์เข้าสู่ระบบทางอีเมล';
+  $('#use-password').textContent = on ? 'ใช้ลิงก์ทางอีเมลแทน' : 'ใช้รหัสผ่านแทน';
+  if (on) $('#password').focus();
+}
 async function signedIn(next) {
   user = next || null; admin = false;
   if (!user) { $('#auth-status').textContent = 'ยังไม่ได้เข้าสู่ระบบ'; controls(); return; }
   const {data, error} = await client.from('mrp_admins').select('user_id').eq('user_id', user.id).maybeSingle();
   admin = !error && !!data;
-  $('#auth-status').textContent = admin
-    ? `เข้าสู่ระบบแล้ว: ${user.email} — อยู่ในรายชื่อผู้ดูแล นำเข้าข้อมูลได้`
-    : `เข้าสู่ระบบแล้ว: ${user.email} — ยังไม่อยู่ในรายชื่อ mrp_admins จึงยังนำเข้าไม่ได้`;
+  // A failed check is not the same as "not an admin" -- say which one happened.
+  $('#auth-status').textContent = error
+    ? `เข้าสู่ระบบแล้ว: ${user.email} — แต่ตรวจสิทธิ์ผู้ดูแลไม่สำเร็จ: ${cloudError(error)}`
+    : admin
+      ? `เข้าสู่ระบบแล้ว: ${user.email} — อยู่ในรายชื่อผู้ดูแล นำเข้าข้อมูลได้`
+      : `เข้าสู่ระบบแล้ว: ${user.email} — ยังไม่อยู่ในรายชื่อ mrp_admins จึงยังนำเข้าไม่ได้`;
   controls();
 }
 
+$('#use-password').onclick = () => passwordMode(!usePassword);
+
 $('#login').onsubmit = async event => {
-  event.preventDefault(); $('#signin').disabled = true;
+  event.preventDefault();
+  if (!client) return;
+  const email = $('#email').value.trim();
+  if (!email) return;
+  $('#send-link').disabled = true;
   try {
-    const {data, error} = await client.auth.signInWithPassword({
-      email: $('#email').value.trim(), password: $('#password').value
+    if (usePassword) {
+      const {data, error} = await client.auth.signInWithPassword({email, password: $('#password').value});
+      if (error) throw error;
+      await signedIn(data.user);
+      return;
+    }
+    // shouldCreateUser stays false: this page is for accounts an admin already
+    // made, and a typo should say "no such account" rather than make one.
+    const {error} = await client.auth.signInWithOtp({
+      email,
+      options: {shouldCreateUser: false, emailRedirectTo: location.href.split('#')[0]}
     });
     if (error) throw error;
-    await signedIn(data.user);
-  } catch { $('#auth-status').textContent = 'เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจอีเมล รหัสผ่าน และการเชื่อมต่อ'; }
-  finally { $('#password').value = ''; $('#signin').disabled = false; }
+    $('#auth-status').textContent =
+      `ส่งลิงก์ไปที่ ${email} แล้ว — เปิดอีเมลแล้วกดลิงก์ในแท็บนี้ได้เลย (ลิงก์ใช้ได้ครั้งเดียว)`;
+  } catch (error) {
+    $('#auth-status').textContent = usePassword ? authError(error) : linkError(error);
+  } finally { $('#password').value = ''; $('#send-link').disabled = false; }
 };
 $('#logout').onclick = async () => {
   const {error} = await client.auth.signOut({scope: 'local'});
@@ -119,8 +151,16 @@ $('#start').onclick = async () => {
 };
 
 if (client) {
-  client.auth.onAuthStateChange((_event, session) => { signedIn(session?.user); });
-  client.auth.getUser().then(({data}) => signedIn(data?.user)).catch(() => signedIn(null));
+  // Read the fragment before the SDK consumes it, so a failed link can explain itself.
+  const callbackProblem = linkCallbackError(location.hash);
+  client.auth.onAuthStateChange((_event, session) => {
+    if (location.hash.includes('access_token')) history.replaceState(null, '', location.pathname + location.search);
+    signedIn(session?.user);
+  });
+  client.auth.getUser()
+    .then(({data}) => signedIn(data?.user))
+    .catch(() => signedIn(null))
+    .finally(() => { if (callbackProblem && !user) $('#auth-status').textContent = callbackProblem; });
 } else {
   $('#auth-status').textContent = clientError;
   controls();
