@@ -5,3 +5,6 @@ rb_inspect.py
 .private-tools/
 .private-rb/
 node_modules/
+mrp-data.csv
+*.xlsm
+*.xlsx

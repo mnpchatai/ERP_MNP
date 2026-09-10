@@ -1,0 +1,117 @@
+// Admin-only loader for sheet DATA columns A-U. Reads the CSV in the browser and
+// writes straight to Supabase, so no company data passes through this repository.
+import {createAppClient, cloudError} from './supabase-client.mjs';
+import {COLUMNS, FIELDS} from './mrp-data.mjs';
+import {parseCsv, checkHeader} from './mrp-csv.mjs';
+
+const $ = s => document.querySelector(s);
+const BATCH = 500;
+const client = createAppClient();
+let user = null, admin = false, rows = null, running = false;
+
+const say = text => { $('#status').textContent = text; };
+function toast(message) {
+  $('#toast').textContent = message; $('#toast').className = 'show';
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => { $('#toast').className = ''; }, 2600);
+}
+function controls() {
+  $('#login').hidden = !!user;
+  $('#logout').hidden = !user;
+  $('#start').disabled = running || !user || !admin || !rows?.length;
+}
+async function signedIn(next) {
+  user = next || null; admin = false;
+  if (!user) { $('#auth-status').textContent = 'ยังไม่ได้เข้าสู่ระบบ'; controls(); return; }
+  const {data, error} = await client.from('mrp_admins').select('user_id').eq('user_id', user.id).maybeSingle();
+  admin = !error && !!data;
+  $('#auth-status').textContent = admin
+    ? `เข้าสู่ระบบแล้ว: ${user.email} — อยู่ในรายชื่อผู้ดูแล นำเข้าข้อมูลได้`
+    : `เข้าสู่ระบบแล้ว: ${user.email} — ยังไม่อยู่ในรายชื่อ mrp_admins จึงยังนำเข้าไม่ได้`;
+  controls();
+}
+
+$('#login').onsubmit = async event => {
+  event.preventDefault(); $('#signin').disabled = true;
+  try {
+    const {data, error} = await client.auth.signInWithPassword({
+      email: $('#email').value.trim(), password: $('#password').value
+    });
+    if (error) throw error;
+    await signedIn(data.user);
+  } catch { $('#auth-status').textContent = 'เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจอีเมล รหัสผ่าน และการเชื่อมต่อ'; }
+  finally { $('#password').value = ''; $('#signin').disabled = false; }
+};
+$('#logout').onclick = async () => {
+  const {error} = await client.auth.signOut({scope: 'local'});
+  if (error) { toast('ออกจากระบบไม่สำเร็จ'); return; }
+  await signedIn(null);
+};
+
+$('#file').onchange = async () => {
+  rows = null; $('#preview').replaceChildren(); say(''); controls();
+  const file = $('#file').files[0];
+  if (!file) return;
+  try {
+    const table = parseCsv(await file.text()).filter(r => r.some(cell => String(cell).trim() !== ''));
+    if (table.length < 2) throw Error('ไฟล์ไม่มีข้อมูล');
+    const problem = checkHeader(table[0], COLUMNS.map(c => c.header));
+    if (problem) throw Error(problem);
+    rows = table.slice(1);
+    const note = document.createElement('p');
+    note.textContent = `อ่านได้ ${rows.length.toLocaleString('th-TH')} แถว x ${table[0].length} คอลัมน์ • หัวข้อตรงกับชีต DATA`;
+    const sample = document.createElement('div'); sample.className = 'scroll';
+    const preview = document.createElement('table');
+    const head = preview.createTHead().insertRow();
+    for (const column of COLUMNS) {
+      const th = document.createElement('th'); th.textContent = column.header; head.append(th);
+    }
+    const body = preview.createTBody();
+    for (const row of rows.slice(0, 5)) {
+      const tr = body.insertRow();
+      for (const value of row) tr.insertCell().textContent = value;
+    }
+    sample.append(preview);
+    $('#preview').replaceChildren(note, sample);
+  } catch (error) {
+    rows = null;
+    $('#preview').replaceChildren(Object.assign(document.createElement('p'),
+      {className: 'empty', textContent: error.message}));
+  }
+  controls();
+};
+
+$('#start').onclick = async () => {
+  if (running || !rows?.length || !admin) return;
+  running = true; controls();
+  $('#progress').hidden = false; $('#progress').value = 0;
+  try {
+    if ($('#replace').checked) {
+      say('กำลังลบข้อมูลเดิม…');
+      const {error} = await client.from('mrp_bom_data').delete().gt('row_no', 0);
+      if (error) throw error;
+    }
+    let done = 0;
+    for (let start = 0; start < rows.length; start += BATCH) {
+      const payload = rows.slice(start, start + BATCH).map((row, offset) => {
+        const record = {row_no: start + offset + 3};   // sheet DATA data starts at row 3
+        FIELDS.forEach((field, index) => { record[field] = row[index] ?? ''; });
+        return record;
+      });
+      const {error} = await client.from('mrp_bom_data').insert(payload);
+      if (error) throw error;
+      done += payload.length;
+      $('#progress').value = done / rows.length;
+      say(`นำเข้าแล้ว ${done.toLocaleString('th-TH')} / ${rows.length.toLocaleString('th-TH')} แถว`);
+    }
+    const {count, error} = await client.from('mrp_bom_data').select('id', {count: 'exact', head: true});
+    if (error) throw error;
+    say(count === rows.length
+      ? `นำเข้าครบ ${count.toLocaleString('th-TH')} แถว — ยอดในฐานข้อมูลตรงกับไฟล์ เปิดหน้า MAIN ใช้งานได้เลย`
+      : `นำเข้า ${done.toLocaleString('th-TH')} แถว แต่ฐานข้อมูลมี ${count?.toLocaleString('th-TH')} แถว กรุณาตรวจสอบก่อนใช้งาน`);
+  } catch (error) {
+    say(error?.message && !error.status ? error.message : cloudError(error));
+  } finally { running = false; controls(); }
+};
+
+client.auth.onAuthStateChange((_event, session) => { signedIn(session?.user); });
+client.auth.getUser().then(({data}) => signedIn(data?.user)).catch(() => signedIn(null));

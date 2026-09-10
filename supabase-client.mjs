@@ -8,7 +8,7 @@ export function createAppClient() {
   });
 }
 export function cloudError(error) {
-  if (error?.code === 'PGRST205') return 'ยังไม่พบตาราง rb_trial_plans — ผู้ดูแลต้องติดตั้ง supabase/rb-cloud-setup.sql';
+  if (error?.code === 'PGRST205') return 'ยังไม่พบตารางที่ต้องใช้บนโปรเจกต์นี้ — ผู้ดูแลต้องติดตั้งสคีมาใน supabase/ ก่อน';
   if (error?.code === '42501') return 'บัญชีนี้ยังไม่มีสิทธิ์ดำเนินการ กรุณาให้ผู้ดูแลตรวจสิทธิ์และ RLS';
   if (error?.status === 401 || error?.code === 'PGRST301') return 'Session หมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง';
   return 'ดำเนินการไม่สำเร็จ กรุณาตรวจเครือข่ายแล้วลองอีกครั้ง ข้อมูลในฟอร์มยังอยู่';

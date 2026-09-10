@@ -1,0 +1,34 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>นำเข้าชีต DATA เข้าฐานข้อมูล</title>
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="rb.css"><link rel="stylesheet" href="mrp.css"></head><body>
+<header class="rb-header"><div><small>MNP ERP / MRP DATA IMPORT</small><h1>นำเข้าชีต DATA คอลัมน์ A–U</h1></div><a href="mrp.html">ไปหน้า MAIN</a></header>
+<main class="rb-main">
+<p class="notice">หน้านี้สำหรับผู้ดูแลที่อยู่ในรายชื่อ <code>mrp_admins</code> เท่านั้น • ไฟล์ถูกอ่านในเบราว์เซอร์และส่งตรงเข้า Supabase • ไม่มีข้อมูลบริษัทถูกอัปโหลดขึ้น GitHub</p>
+
+<section class="card"><h2>1. เข้าสู่ระบบ</h2>
+  <p id="auth-status" role="status">กำลังตรวจบัญชี…</p>
+  <form id="login"><div class="fields">
+    <label>อีเมล<input id="email" type="email" autocomplete="username" required></label>
+    <label>รหัสผ่าน<input id="password" type="password" autocomplete="current-password" required></label>
+  </div><button id="signin" class="primary">เข้าสู่ระบบ</button></form>
+  <button id="logout" hidden>ออกจากระบบ</button>
+  <p class="muted">ยังไม่มีบัญชี ให้สร้างผู้ใช้ใน Supabase → Authentication → Users แล้วรัน<br>
+  <code>insert into public.mrp_admins(user_id, note) values ('&lt;user id&gt;', 'MRP admin');</code></p>
+</section>
+
+<section class="card"><h2>2. เลือกไฟล์ CSV ของชีต DATA</h2>
+  <p class="muted">สร้างไฟล์ด้วย <code>python3 tools/extract-mrp-data.py "Material_M&amp;P MRP 4-1_Ver_(Toy).xlsm" mrp-data.csv</code><br>
+  บรรทัดแรกต้องเป็นหัวข้อเดิมของแถวที่ 2 ในชีต DATA และต้องมี 21 คอลัมน์ A–U</p>
+  <label>ไฟล์ CSV<input id="file" type="file" accept=".csv,text/csv"></label>
+  <div id="preview"></div>
+</section>
+
+<section class="card"><h2>3. นำเข้า</h2>
+  <label class="inline"><input id="replace" type="checkbox" checked> ลบข้อมูลเดิมทั้งหมดก่อนนำเข้า (แนะนำ)</label>
+  <div class="actions"><button id="start" class="primary" disabled>เริ่มนำเข้าข้อมูล</button></div>
+  <progress id="progress" value="0" max="1" hidden></progress>
+  <p id="status" role="status"></p>
+</section>
+</main>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="vendor/supabase.js"></script><script type="module" src="mrp-import.js"></script></body></html>
