@@ -1,6 +1,6 @@
 import {calculate} from './rb-calc.mjs';
 import {mountCatalog} from './rb-catalog.mjs';
-import {createAppClient,cloudError} from './supabase-client.mjs';
+import {createAppClient,cloudError,authError} from './supabase-client.mjs';
 import {saveCloudPlan,listCloudPlans,validateSnapshot} from './rb-cloud.mjs';
 const $=s=>document.querySelector(s),key='mnp-rb-pilot-v1';
 const fields=['quantity','stock','perFg','yield','weight','setup','joint','scrap','batch','increment'];
@@ -97,7 +97,7 @@ $('#login').onsubmit=async event=>{
     if(!client)throw Error('SDK unavailable');
     const {data,error}=await client.auth.signInWithPassword({email:$('#email').value.trim(),password:$('#password').value});
     if(error)throw error;setUser(data.user);
-  }catch{$('#auth-status').textContent='เข้าสู่ระบบไม่สำเร็จ ตรวจอีเมล/รหัสผ่านของ Supabase Auth และเครือข่าย';}
+  }catch(error){$('#auth-status').textContent=authError(error);}
   finally{$('#password').value='';$('#signin').disabled=!client;}
 };
 $('#logout').onclick=async()=>{

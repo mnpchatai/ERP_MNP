@@ -1,5 +1,5 @@
 import {config} from './public-config.js';
-import {createAppClient,cloudError} from './supabase-client.mjs';
+import {createAppClient,cloudError,authError} from './supabase-client.mjs';
 const $ = s => document.querySelector(s);
 let client;
 function signedIn(user) {
@@ -28,7 +28,7 @@ $('#login').onsubmit = async event => {
     const {data,error} = await client.auth.signInWithPassword({email:$('#email').value.trim(),password:$('#password').value});
     if(error) throw error;
     signedIn(data.user);
-  } catch { $('#auth-status').textContent = 'เข้าสู่ระบบไม่สำเร็จ ตรวจบัญชี Supabase Auth รหัสผ่าน และการเชื่อมต่อ'; }
+  } catch (error) { $('#auth-status').textContent = authError(error); }
   finally { $('#password').value=''; $('#signin').disabled=false; }
 };
 $('#logout').onclick = async () => {
