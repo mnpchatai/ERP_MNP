@@ -1,6 +1,6 @@
 // Admin-only loader for sheet DATA columns A-U. Reads the CSV in the browser and
 // writes straight to Supabase, so no company data passes through this repository.
-import {createAppClient, cloudError} from './supabase-client.mjs';
+import {createAppClient, cloudError, authError} from './supabase-client.mjs';
 import {COLUMNS, FIELDS} from './mrp-data.mjs';
 import {parseCsv, checkHeader} from './mrp-csv.mjs';
 
@@ -29,9 +29,12 @@ async function signedIn(next) {
   if (!user) { $('#auth-status').textContent = 'ยังไม่ได้เข้าสู่ระบบ'; controls(); return; }
   const {data, error} = await client.from('mrp_admins').select('user_id').eq('user_id', user.id).maybeSingle();
   admin = !error && !!data;
-  $('#auth-status').textContent = admin
-    ? `เข้าสู่ระบบแล้ว: ${user.email} — อยู่ในรายชื่อผู้ดูแล นำเข้าข้อมูลได้`
-    : `เข้าสู่ระบบแล้ว: ${user.email} — ยังไม่อยู่ในรายชื่อ mrp_admins จึงยังนำเข้าไม่ได้`;
+  // A failed check is not the same as "not an admin" -- say which one happened.
+  $('#auth-status').textContent = error
+    ? `เข้าสู่ระบบแล้ว: ${user.email} — แต่ตรวจสิทธิ์ผู้ดูแลไม่สำเร็จ: ${cloudError(error)}`
+    : admin
+      ? `เข้าสู่ระบบแล้ว: ${user.email} — อยู่ในรายชื่อผู้ดูแล นำเข้าข้อมูลได้`
+      : `เข้าสู่ระบบแล้ว: ${user.email} — ยังไม่อยู่ในรายชื่อ mrp_admins จึงยังนำเข้าไม่ได้`;
   controls();
 }
 
@@ -43,7 +46,7 @@ $('#login').onsubmit = async event => {
     });
     if (error) throw error;
     await signedIn(data.user);
-  } catch { $('#auth-status').textContent = 'เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจอีเมล รหัสผ่าน และการเชื่อมต่อ'; }
+  } catch (error) { $('#auth-status').textContent = authError(error); }
   finally { $('#password').value = ''; $('#signin').disabled = false; }
 };
 $('#logout').onclick = async () => {
