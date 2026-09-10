@@ -1,4 +1,5 @@
 import {config} from './public-config.js';
+import {createAppClient,cloudError} from './supabase-client.mjs';
 const $ = s => document.querySelector(s);
 let client;
 function signedIn(user) {
@@ -11,13 +12,15 @@ function signedIn(user) {
 try {
   const {url,key} = config;
   $('#project').textContent = `โปรเจกต์: ${new URL(url).hostname}`;
-  client = window.supabase.createClient(url,key,{auth:{persistSession:false,detectSessionInUrl:false,autoRefreshToken:true}});
+  client = createAppClient();
   const health = await fetch(`${url}/auth/v1/settings`,{headers:{apikey:key},signal:AbortSignal.timeout(10000)});
   if (!health.ok) throw Error(`Auth ตอบกลับ HTTP ${health.status}`);
   $('#connection').textContent = 'เชื่อมบริการ Auth สำเร็จ — ยังไม่ได้ยืนยันสิทธิ์อ่าน/เขียนฐานข้อมูล';
   $('#signin').disabled = false;
   signedIn(null);
   client.auth.onAuthStateChange((_event,session)=>signedIn(session?.user));
+  const {data} = await client.auth.getUser();
+  signedIn(data?.user);
 } catch(error) { $('#connection').textContent = `เชื่อมต่อไม่สำเร็จ: ${error.message}`; }
 $('#login').onsubmit = async event => {
   event.preventDefault(); $('#signin').disabled = true;
@@ -37,7 +40,7 @@ $('#probe').onclick = async () => {
   $('#probe').disabled=true;
   try {
     const {error} = await client.from('rb_trial_plans').select('id').limit(1);
-    $('#database').textContent=error ? `ยังอ่านตารางทดลองไม่ได้ (${error.code || 'network'}) — ต้องตรวจตารางและ RLS ก่อน ไม่ได้บันทึกข้อมูลใด` : 'คำขออ่านตารางทดลองสำเร็จ — ยังไม่ได้ทดสอบการเขียนหรือยืนยัน RLS ครบทุกบทบาท';
+    $('#database').textContent=error ? cloudError(error) : 'อ่านตารางสำเร็จ — เปิดหน้า RB เพื่อคำนวณและบันทึกแผน';
   } catch { $('#database').textContent='ตรวจฐานข้อมูลไม่สำเร็จ กรุณาตรวจเครือข่าย'; }
   finally { $('#probe').disabled=false; }
 };
