@@ -8,7 +8,7 @@
 .item-warning li{display:inline}
 .item-warning li:not(:last-child)::after{content:" · "}
 
-.item-form{display:grid;gap:8px}
+.item-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:start}
 .item-form fieldset{margin:0;padding:8px 12px 10px;border:1px solid var(--line);border-radius:8px;background:#fbfcfe}
 .item-form legend{padding:0 6px;font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.02em;text-transform:uppercase}
 .item-form .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:3px 8px}
@@ -19,5 +19,6 @@
 .item-form .req::after{content:" *";color:#c92a2a}
 .item-form .pair{display:grid;grid-template-columns:1fr 68px;gap:4px}
 .item-form .pair input{min-width:0}
-.item-form .actions{margin-top:2px}
+.item-form .actions{grid-column:1 / -1;margin-top:2px}
+@media(max-width:900px){.item-form{grid-template-columns:1fr}}
 @media(max-width:560px){.item-form fieldset{padding:8px}}
