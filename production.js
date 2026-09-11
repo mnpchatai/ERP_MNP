@@ -59,7 +59,7 @@ function renderItems() {
   }
   const table = document.createElement('table');
   const head = table.createTHead().insertRow();
-  for (const title of ['รหัส', 'ชื่อ', 'ประเภท', 'หน่วย', 'ต้นทุน', 'ราคาขาย']) {
+  for (const title of ['รหัส', 'ชื่อ', 'คลาส', 'กรุ๊ป', 'ประเภท', 'หน่วย', 'ต้นทุน', 'ราคาขาย']) {
     const th = document.createElement('th'); th.textContent = title; head.append(th);
   }
   const body = table.createTBody();
@@ -67,6 +67,8 @@ function renderItems() {
     const tr = body.insertRow();
     tr.insertCell().textContent = item.code;
     tr.insertCell().textContent = item.name;
+    tr.insertCell().textContent = item.item_class || '';
+    tr.insertCell().textContent = item.item_group || '';
     tr.insertCell().textContent = item.item_type;
     tr.insertCell().textContent = item.uom_code;
     tr.insertCell().textContent = Number(item.standard_cost).toLocaleString('th-TH');
@@ -77,6 +79,7 @@ function renderItems() {
 
 function populateItemPickers() {
   options($('#item-uom'), uoms, u => u.code, u => `${u.code} — ${u.name}`);
+  options($('#item-uom-secondary'), uoms, u => u.code, u => `${u.code} — ${u.name}`, '— ไม่มี —');
   const fgItems = items.filter(i => i.item_type === 'FG');
   options($('#bom-item'), fgItems, i => i.id, itemLabel, '— เลือกสินค้า —');
   options($('#line-component'), items, i => i.id, itemLabel, '— เลือกวัตถุดิบ/ชิ้นส่วน —');
@@ -89,7 +92,7 @@ function populateItemPickers() {
 async function loadMaster() {
   try {
     const [itemsRes, uomsRes, deptsRes] = await Promise.all([
-      client.from('mst_items').select('id,code,name,item_type,uom_code,standard_cost,sales_price').order('code'),
+      client.from('mst_items').select('id,code,name,name_en,code_secondary,barcode,item_type,uom_code,uom_secondary_code,uom_secondary_qty,item_class,item_subtype,item_group,standard_cost,sales_price,description,shape,dim_length,dim_width,dim_thickness,dim_height,dim_length_uom,volume,volume_uom,process_time_min,size_value,size_uom,weight_min,weight_per_piece,weight_max,weight_per_piece_uom,scrap_qty,valid_from,valid_to,used_count,revision').order('code'),
       client.from('mst_uom').select('code,name').order('code'),
       client.from('org_departments').select('code,name').eq('is_active', true).order('code')
     ]);
@@ -104,18 +107,70 @@ async function loadMaster() {
   } catch (error) { toast(cloudError(error)); }
 }
 
+// Mirrors the DB check constraints on mst_items (code/name/name_en): must not
+// start with a symbol, must not contain \ or ' — the legacy form's own
+// warning box. Checked client-side too so the user sees a Thai message
+// instead of a raw Postgres constraint-violation error.
+function badNameOrCode(value, label) {
+  if (!value) return null;
+  if (/[\\']/.test(value)) return `${label} ห้ามมีสัญลักษณ์ \\ หรือ '`;
+  if (!/^[A-Za-z0-9ก-๙]/.test(value)) return `${label} ห้ามขึ้นต้นด้วยสัญลักษณ์`;
+  return null;
+}
+
+function numOrNull(id) {
+  const v = $(id).value;
+  return v === '' ? null : Number(v);
+}
+
+function textOrNull(id) {
+  const v = $(id).value.trim();
+  return v === '' ? null : v;
+}
+
 $('#item-form').addEventListener('submit', async event => {
   event.preventDefault();
+  const nameTh = $('#item-name').value.trim();
+  const nameEn = $('#item-name-en').value.trim();
+  const code = $('#item-code').value.trim();
+  const badField = badNameOrCode(nameTh, 'ชื่อไทย') || badNameOrCode(nameEn, 'ชื่ออังกฤษ') || badNameOrCode(code, 'รหัส');
+  if (badField) { $('#item-status').textContent = badField; toast(badField); return; }
+
   const button = event.target.querySelector('button[type="submit"]');
   button.disabled = true; $('#item-status').textContent = 'กำลังบันทึก…';
   try {
+    const dimUom = $('#item-dim-uom').value;
+    const weightUom = $('#item-weight-uom').value;
     const {error} = await client.from('mst_items').insert({
-      code: $('#item-code').value.trim(),
-      name: $('#item-name').value.trim(),
+      code,
+      name: nameTh,
+      name_en: nameEn,
+      code_secondary: textOrNull('#item-code-secondary'),
+      barcode: textOrNull('#item-barcode'),
       item_type: $('#item-type').value,
       uom_code: $('#item-uom').value,
+      uom_secondary_code: $('#item-uom-secondary').value || null,
+      uom_secondary_qty: numOrNull('#item-uom-secondary-qty'),
+      item_class: textOrNull('#item-class'),
+      item_subtype: textOrNull('#item-subtype'),
+      item_group: textOrNull('#item-group'),
       standard_cost: Number($('#item-cost').value) || 0,
-      sales_price: Number($('#item-price').value) || 0
+      sales_price: Number($('#item-price').value) || 0,
+      description: textOrNull('#item-description'),
+      shape: textOrNull('#item-shape'),
+      dim_length: numOrNull('#item-dim-length'), dim_length_uom: dimUom,
+      dim_width: numOrNull('#item-dim-width'), dim_width_uom: dimUom,
+      dim_thickness: numOrNull('#item-dim-thickness'), dim_thickness_uom: dimUom,
+      dim_height: numOrNull('#item-dim-height'), dim_height_uom: dimUom,
+      size_value: numOrNull('#item-size'), size_uom: dimUom,
+      volume: numOrNull('#item-volume'), volume_uom: $('#item-volume-uom').value,
+      process_time_min: numOrNull('#item-process-time'),
+      weight_min: numOrNull('#item-weight-min'),
+      weight_per_piece: numOrNull('#item-weight-per-piece'), weight_per_piece_uom: weightUom,
+      weight_max: numOrNull('#item-weight-max'),
+      scrap_qty: numOrNull('#item-scrap-qty'),
+      valid_from: $('#item-valid-from').value || null,
+      valid_to: $('#item-valid-to').value || null
     });
     if (error) throw error;
     event.target.reset();

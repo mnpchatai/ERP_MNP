@@ -1,6 +1,6 @@
 <!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>การผลิต • Item / BOM / Routing / MO</title>
-<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="rb.css"><link rel="stylesheet" href="mrp.css"></head><body>
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="rb.css"><link rel="stylesheet" href="mrp.css"><link rel="stylesheet" href="production.css"></head><body>
 <header class="rb-header"><div><small>MNP ERP / PRODUCTION</small><h1>ฝั่งการผลิต — Item, BOM, Routing, ใบสั่งผลิต</h1></div><a href="connect.html">เชื่อม Supabase</a><a href="index.html">กลับ ERP</a></header>
 <main class="rb-main">
 <p class="notice" id="auth-status">กำลังตรวจสถานะเข้าสู่ระบบ…</p>
@@ -15,19 +15,86 @@
 <section class="card" id="items-card">
   <div class="head"><h2>Item Master</h2><span class="muted" id="items-count"></span></div>
   <div class="scroll" id="items-wrap"><p class="empty">กำลังโหลด…</p></div>
-  <form id="item-form" class="mrp-grid" style="margin-top:14px">
-    <label>รหัสสินค้า<input id="item-code" required maxlength="40"></label>
-    <label>ชื่อ<input id="item-name" required maxlength="120"></label>
-    <label>ประเภท<select id="item-type">
-      <option value="FG">สินค้าสำเร็จรูป (FG)</option>
-      <option value="RM">วัตถุดิบ (RM)</option>
-      <option value="WIP">ระหว่างผลิต (WIP)</option>
-      <option value="SERVICE">บริการ (SERVICE)</option>
-    </select></label>
-    <label>หน่วยนับ<select id="item-uom"></select></label>
-    <label>ต้นทุนมาตรฐาน<input id="item-cost" type="number" min="0" step="any" value="0"></label>
-    <label>ราคาขาย<input id="item-price" type="number" min="0" step="any" value="0"></label>
-    <div class="actions"><button type="submit" class="primary">เพิ่มสินค้า</button><span class="muted" id="item-status"></span></div>
+  <div class="item-warning">
+    <span aria-hidden="true">⚠</span>
+    <div>
+      <strong>ข้อควรระวังตอนตั้งชื่อ/รหัส</strong>
+      <ol>
+        <li>ห้ามใช้สัญลักษณ์นำหน้า "ชื่อ" และ "รหัส"</li>
+        <li>ห้ามใช้สัญลักษณ์ \ ในการตั้ง "ชื่อ" และ "รหัส"</li>
+        <li>ห้ามใช้สัญลักษณ์ ' (single quote) ในโปรแกรม</li>
+      </ol>
+    </div>
+  </div>
+
+  <form id="item-form" class="item-form" style="margin-top:14px">
+    <fieldset>
+      <legend>ส่วนหลัก</legend>
+      <div class="grid">
+        <label><span class="req">ชื่อไทย</span><input id="item-name" required maxlength="120"></label>
+        <label><span class="req">ชื่ออังกฤษ</span><input id="item-name-en" required maxlength="120"></label>
+        <label><span class="req">รหัส</span><input id="item-code" required maxlength="40"></label>
+        <label>เสริม<input id="item-code-secondary" maxlength="40"></label>
+        <label>บาร์โค้ด<input id="item-barcode" maxlength="64"></label>
+        <label><span class="req">ประเภท</span><select id="item-type">
+          <option value="FG">สินค้าสำเร็จรูป (FG)</option>
+          <option value="RM">วัตถุดิบ (RM)</option>
+          <option value="WIP">ระหว่างผลิต (WIP)</option>
+          <option value="SERVICE">บริการ (SERVICE)</option>
+        </select></label>
+        <label><span class="req">หน่วย</span><select id="item-uom" required></select></label>
+        <label>หน่วยย่อย<select id="item-uom-secondary"></select></label>
+        <label>จำนวนหน่วยย่อย<span class="hint">ต่อ 1 หน่วยหลัก</span><input id="item-uom-secondary-qty" type="number" min="0" step="any"></label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>หมวดหมู่</legend>
+      <div class="grid">
+        <label>คลาส<input id="item-class" maxlength="40" placeholder="เช่น Process"></label>
+        <label>ไทป์<input id="item-subtype" maxlength="40" placeholder="เช่น วัตถุดิบ/สินค้า/ชิ้นส่วน"></label>
+        <label>กรุ๊ป<input id="item-group" maxlength="40" placeholder="เช่น RB, GR, PT, BG, PK, ST, WH"></label>
+        <label>ต้นทุนมาตรฐาน<input id="item-cost" type="number" min="0" step="any" value="0"></label>
+        <label>ราคาขาย<input id="item-price" type="number" min="0" step="any" value="0"></label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>รายละเอียด</legend>
+      <div class="grid">
+        <label class="wide">รายละเอียด<textarea id="item-description" maxlength="2000"></textarea></label>
+        <label>รูปทรง<input id="item-shape" maxlength="60"></label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>มิติ &amp; น้ำหนัก</legend>
+      <div class="grid">
+        <label>หน่วยมิติ<select id="item-dim-uom"><option value="mm">มม. (mm)</option><option value="cm">ซม. (cm)</option><option value="m">ม. (m)</option><option value="inch">นิ้ว (inch)</option></select></label>
+        <label>ยาว<input id="item-dim-length" type="number" min="0" step="any"></label>
+        <label>กว้าง<input id="item-dim-width" type="number" min="0" step="any"></label>
+        <label>หนา<input id="item-dim-thickness" type="number" min="0" step="any"></label>
+        <label>สูง<input id="item-dim-height" type="number" min="0" step="any"></label>
+        <label>ขนาด<input id="item-size" type="number" min="0" step="any"></label>
+        <label>ปริมาตร<div class="pair"><input id="item-volume" type="number" min="0" step="any"><select id="item-volume-uom"><option value="M3">ลบ.ม.</option><option value="CM3">ลบ.ซม.</option><option value="L">ลิตร</option></select></div></label>
+        <label>เวลา (Process)<span class="hint">นาที/ชิ้น</span><input id="item-process-time" type="number" min="0" step="any"></label>
+        <label>หน่วยน้ำหนัก<select id="item-weight-uom"><option value="KG">กก. (KG)</option><option value="GR">กรัม (GR)</option><option value="Ct">Ct</option></select></label>
+        <label>น้ำหนักต่ำสุด<input id="item-weight-min" type="number" min="0" step="any"></label>
+        <label>น้ำหนัก/ชิ้น<input id="item-weight-per-piece" type="number" min="0" step="any"></label>
+        <label>น้ำหนักสูงสุด<input id="item-weight-max" type="number" min="0" step="any"></label>
+        <label>จำนวนสูญเสีย<input id="item-scrap-qty" type="number" min="0" step="any"></label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>วันที่ใช้งาน</legend>
+      <div class="grid">
+        <label>วันที่เริ่ม<input id="item-valid-from" type="date"></label>
+        <label>ถึง<input id="item-valid-to" type="date"></label>
+      </div>
+    </fieldset>
+
+    <div class="actions"><button type="submit" class="primary">บันทึก</button><button type="reset">ล้างข้อมูล</button><span class="muted" id="item-status"></span></div>
   </form>
 </section>
 

@@ -1,0 +1,22 @@
+/* Item Master form — grouped layout matching the legacy "โครงสร้างสินค้า"
+   screen (ส่วนหลัก/หมวดหมู่/รายละเอียด/มิติ/น้ำหนัก/วันที่) but restyled as
+   titled fieldsets on one page instead of a tree + tabbed dialog. */
+
+.item-warning{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;margin-bottom:18px;border:1px solid #ffe08a;border-radius:8px;background:#fff9db;color:#7c5800;font-size:13px;line-height:1.6}
+.item-warning strong{display:block;margin-bottom:2px;color:#7c5800}
+.item-warning ol{margin:4px 0 0;padding-left:18px}
+
+.item-form{display:grid;gap:18px}
+.item-form fieldset{margin:0;padding:16px 18px 18px;border:1px solid var(--line);border-radius:9px;background:#fbfcfe}
+.item-form legend{padding:0 8px;margin-left:4px;font-size:13px;font-weight:700;color:var(--nav);letter-spacing:.02em}
+.item-form .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:6px 16px}
+.item-form label{display:grid;gap:6px;margin:8px 0;font-size:13px;font-weight:600;color:var(--muted)}
+.item-form label.wide{grid-column:1 / -1}
+.item-form input,.item-form select,.item-form textarea{font-size:14px;color:#172b4d}
+.item-form textarea{min-height:64px;resize:vertical;padding:10px;border:1px solid #cad4de;border-radius:6px}
+.item-form .req::after{content:" *";color:#c92a2a}
+.item-form .pair{display:grid;grid-template-columns:1fr 84px;gap:6px}
+.item-form .pair input{min-width:0}
+.item-form .hint{font-weight:400;color:#94a3b8;font-size:11px}
+.item-form .actions{margin-top:4px}
+@media(max-width:560px){.item-form fieldset{padding:14px}}
