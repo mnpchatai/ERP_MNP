@@ -199,6 +199,10 @@ begin
       qty_on_hand = v_bal.qty_on_hand + new.qty
     where item_id = new.item_id and warehouse_code = new.warehouse_code;
   else
+    if v_bal.qty_on_hand + new.qty < 0 then
+      raise exception 'insufficient stock for item % in warehouse %: on hand %, requested %',
+        new.item_id, new.warehouse_code, v_bal.qty_on_hand, -new.qty;
+    end if;
     update public.inv_stock_balances set qty_on_hand = v_bal.qty_on_hand + new.qty
     where item_id = new.item_id and warehouse_code = new.warehouse_code;
   end if;
