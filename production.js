@@ -34,6 +34,14 @@ function options(select, rows, valueOf, labelOf, placeholder) {
 function deptLabel(dept) { return dept.name && dept.name !== dept.code ? `${dept.code} — ${dept.name}` : dept.code; }
 function itemLabel(item) { return `${item.code} — ${item.name}`; }
 
+// inv_apply_stock_ledger raises a plain Postgres exception (not a PGRST/network
+// code) when a ledger row would drive a balance negative — cloudError()'s
+// generic fallback would wrongly tell the user to check their network.
+function stockError(error) {
+  if (/insufficient stock/i.test(error?.message ?? '')) return `วัตถุดิบในคลังไม่พอ: ${error.message}`;
+  return cloudError(error);
+}
+
 // ---- auth ---------------------------------------------------------------
 function renderAuth() {
   $('#auth-status').textContent = user ? `เข้าสู่ระบบแล้ว: ${user.email}` : 'ยังไม่ได้เข้าสู่ระบบ';
@@ -92,6 +100,7 @@ async function loadMaster() {
     renderItems(); populateItemPickers();
     await loadMoList();
     await loadShopfloorMoList();
+    await loadStockBalances();
   } catch (error) { toast(cloudError(error)); }
 }
 
@@ -116,6 +125,42 @@ $('#item-form').addEventListener('submit', async event => {
   } catch (error) { $('#item-status').textContent = cloudError(error); }
   finally { button.disabled = false; }
 });
+
+// ---- Stock balances ---------------------------------------------------------
+function renderStockBalances(rows) {
+  const wrap = $('#stock-wrap');
+  $('#stock-count').textContent = rows.length ? `${rows.length} รายการ` : '';
+  if (!rows.length) {
+    wrap.replaceChildren(Object.assign(document.createElement('p'), {className: 'empty', textContent: 'ยังไม่มีข้อมูลสต็อก'}));
+    return;
+  }
+  const table = document.createElement('table');
+  const head = table.createTHead().insertRow();
+  for (const title of ['รหัสสินค้า', 'ชื่อ', 'คลัง', 'จำนวนคงเหลือ', 'ต้นทุนเฉลี่ย']) {
+    const th = document.createElement('th'); th.textContent = title; head.append(th);
+  }
+  const body = table.createTBody();
+  for (const row of rows) {
+    const tr = body.insertRow();
+    const item = row.mst_items;
+    tr.insertCell().textContent = item?.code ?? row.item_id;
+    tr.insertCell().textContent = item?.name ?? '-';
+    tr.insertCell().textContent = row.warehouse_code;
+    tr.insertCell().textContent = Number(row.qty_on_hand).toLocaleString('th-TH');
+    tr.insertCell().textContent = Number(row.avg_cost).toLocaleString('th-TH');
+  }
+  wrap.replaceChildren(table);
+}
+
+async function loadStockBalances() {
+  try {
+    const {data, error} = await client.from('inv_stock_balances')
+      .select('item_id,warehouse_code,qty_on_hand,avg_cost,mst_items(code,name)')
+      .order('warehouse_code');
+    if (error) throw error;
+    renderStockBalances(data);
+  } catch (error) { toast(cloudError(error)); }
+}
 
 // ---- BOM ------------------------------------------------------------------
 function renderBomLines() {
@@ -462,7 +507,8 @@ $('#mo-form').addEventListener('submit', async event => {
     toast(`เปิดใบสั่งผลิต ${docNo} แล้ว`);
     await loadMoList();
     if ($('#shopfloor-mo')) await loadShopfloorMoList();
-  } catch (error) { $('#mo-status').textContent = cloudError(error); }
+    await loadStockBalances();
+  } catch (error) { $('#mo-status').textContent = stockError(error); }
   finally { button.disabled = false; }
 });
 
@@ -595,7 +641,8 @@ $('#shopfloor-ops-wrap').addEventListener('click', async event => {
       }
       await loadShopfloorOps(currentShopfloorMo.id);
       await loadMoList();
-    } catch (error) { toast(cloudError(error)); finishButton.disabled = false; }
+      await loadStockBalances();
+    } catch (error) { toast(stockError(error)); finishButton.disabled = false; }
   }
 });
 
