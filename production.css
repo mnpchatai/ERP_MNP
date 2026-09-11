@@ -12,7 +12,7 @@
 .item-form fieldset{margin:0;padding:8px 12px 10px;border:1px solid var(--line);border-radius:8px;background:#fbfcfe}
 .item-form legend{padding:0 6px;font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.02em;text-transform:uppercase}
 .item-form .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:3px 8px}
-.item-form label{display:grid;gap:2px;margin:3px 0;font-size:10.5px;font-weight:600;color:var(--muted);line-height:1.3}
+.item-form label{display:grid;gap:2px;margin:3px 0;font-size:12px;font-weight:600;color:var(--muted);line-height:1.6}
 .item-form label.wide{grid-column:1 / -1}
 .item-form input,.item-form select,.item-form textarea{font-size:12.5px;color:var(--text);padding:5px 7px;min-height:28px}
 .item-form textarea{min-height:32px;resize:vertical;border:1px solid #cad4de;border-radius:5px}
