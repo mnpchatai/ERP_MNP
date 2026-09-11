@@ -91,6 +91,7 @@ async function loadMaster() {
     items = itemsRes.data; uoms = uomsRes.data; depts = deptsRes.data;
     renderItems(); populateItemPickers();
     await loadMoList();
+    await loadShopfloorMoList();
   } catch (error) { toast(cloudError(error)); }
 }
 
@@ -406,30 +407,196 @@ async function loadMoPickers(itemId) {
 
 $('#mo-item').addEventListener('change', () => loadMoPickers($('#mo-item').value));
 
+const MAIN_WAREHOUSE = 'MAIN';
+
+// Opening an MO is three separate inserts (MO row, stock issue, operations)
+// run client-side in sequence, not one database transaction — there is no
+// service layer yet (see docs/DATA-LAYER.md). If a later step fails here,
+// earlier ones already committed; the status line says which step failed so
+// it can be fixed by hand meanwhile.
 $('#mo-form').addEventListener('submit', async event => {
   event.preventDefault();
   const itemId = $('#mo-item').value, bomId = $('#mo-bom').value, routingId = $('#mo-routing').value;
-  if (!itemId || !bomId || !routingId) return;
+  const qty = Number($('#mo-qty').value);
+  if (!itemId || !bomId || !routingId || !qty) return;
   const button = $('#mo-submit');
   button.disabled = true; $('#mo-status').textContent = 'กำลังเปิดใบสั่งผลิต…';
   try {
     const {data: docNo, error: docError} = await client.rpc('mst_next_doc_no', {p_doc_type: 'MO'});
     if (docError) throw docError;
-    const {error} = await client.from('prod_manufacturing_orders').insert({
-      doc_no: docNo,
-      item_id: itemId,
-      qty: Number($('#mo-qty').value),
-      bom_id: bomId,
-      routing_id: routingId,
-      due_date: $('#mo-due').value || null
-    });
-    if (error) throw error;
-    $('#mo-qty').value = ''; $('#mo-due').value = '';
-    $('#mo-status').textContent = `เปิดใบสั่งผลิต ${docNo} แล้ว`;
+
+    const {data: mo, error: moError} = await client.from('prod_manufacturing_orders').insert({
+      doc_no: docNo, item_id: itemId, qty, bom_id: bomId, routing_id: routingId,
+      due_date: $('#mo-due').value || null, status: 'RELEASED'
+    }).select('id').single();
+    if (moError) throw moError;
+
+    $('#mo-status').textContent = `${docNo}: กำลังตัดสต็อกวัตถุดิบตาม BOM…`;
+    const {data: bomLinesForMo, error: bomLinesError} = await client.from('prod_bom_lines')
+      .select('component_item_id,qty_per_unit,scrap_pct').eq('bom_id', bomId);
+    if (bomLinesError) throw bomLinesError;
+    if (bomLinesForMo.length) {
+      const issues = bomLinesForMo.map(line => ({
+        item_id: line.component_item_id, warehouse_code: MAIN_WAREHOUSE, txn_type: 'MO_ISSUE',
+        ref_type: 'prod_manufacturing_orders', ref_id: mo.id,
+        qty: -(qty * Number(line.qty_per_unit) * (1 + Number(line.scrap_pct)))
+      }));
+      const {error: issueError} = await client.from('inv_stock_ledger').insert(issues);
+      if (issueError) throw issueError;
+    }
+
+    $('#mo-status').textContent = `${docNo}: กำลังสร้างขั้นตอนผลิตจาก Routing…`;
+    const {data: steps, error: stepsError} = await client.from('prod_routing_steps')
+      .select('seq,dept_code').eq('routing_id', routingId).order('seq');
+    if (stepsError) throw stepsError;
+    if (steps.length) {
+      const ops = steps.map((step, index) => ({
+        mo_id: mo.id, seq: step.seq, dept_code: step.dept_code, status: index === 0 ? 'READY' : 'PENDING'
+      }));
+      const {error: opsError} = await client.from('prod_mo_operations').insert(ops);
+      if (opsError) throw opsError;
+    }
+
+    event.target.reset();
+    $('#mo-status').textContent = `เปิดใบสั่งผลิต ${docNo} แล้ว — ตัดสต็อกและสร้างขั้นตอนผลิตครบ`;
     toast(`เปิดใบสั่งผลิต ${docNo} แล้ว`);
     await loadMoList();
+    if ($('#shopfloor-mo')) await loadShopfloorMoList();
   } catch (error) { $('#mo-status').textContent = cloudError(error); }
   finally { button.disabled = false; }
+});
+
+// ---- Shopfloor ----------------------------------------------------------------
+let shopfloorMos = [], currentShopfloorMo = null, shopfloorOps = [];
+
+function opStatusLabel(status) {
+  return {PENDING: 'รอคิว', READY: 'พร้อมเริ่ม', RUNNING: 'กำลังทำ', DONE: 'เสร็จแล้ว'}[status] ?? status;
+}
+
+function renderShopfloorOps() {
+  const wrap = $('#shopfloor-ops-wrap');
+  if (!currentShopfloorMo) {
+    wrap.replaceChildren(Object.assign(document.createElement('p'), {className: 'empty', textContent: 'เลือกใบสั่งผลิตก่อน'}));
+    return;
+  }
+  if (!shopfloorOps.length) {
+    wrap.replaceChildren(Object.assign(document.createElement('p'), {className: 'empty', textContent: 'ใบสั่งผลิตนี้ยังไม่มีขั้นตอน (Routing ไม่มี step)'}));
+    return;
+  }
+  const table = document.createElement('table');
+  const head = table.createTHead().insertRow();
+  for (const title of ['ลำดับ', 'แผนก', 'สถานะ', 'จำนวนดี', 'จำนวนเสีย', '']) {
+    const th = document.createElement('th'); th.textContent = title; head.append(th);
+  }
+  const body = table.createTBody();
+  for (const op of shopfloorOps) {
+    const tr = body.insertRow();
+    tr.insertCell().textContent = op.seq;
+    tr.insertCell().textContent = deptLabel({code: op.dept_code, name: depts.find(d => d.code === op.dept_code)?.name});
+    tr.insertCell().textContent = opStatusLabel(op.status);
+    const act = tr.insertCell();
+    if (op.status === 'RUNNING') {
+      const good = document.createElement('input');
+      good.type = 'number'; good.min = '0'; good.step = 'any'; good.value = '0'; good.dataset.good = op.id;
+      const reject = document.createElement('input');
+      reject.type = 'number'; reject.min = '0'; reject.step = 'any'; reject.value = '0'; reject.dataset.reject = op.id;
+      tr.insertCell().append(good);
+      tr.insertCell().append(reject);
+      const finish = document.createElement('button');
+      finish.type = 'button'; finish.textContent = 'บันทึกจบขั้นตอน'; finish.dataset.finish = op.id;
+      act.append(finish);
+    } else {
+      tr.insertCell().textContent = op.status === 'DONE' ? op.qty_good : '-';
+      tr.insertCell().textContent = op.status === 'DONE' ? op.qty_reject : '-';
+      if (op.status === 'READY') {
+        const start = document.createElement('button');
+        start.type = 'button'; start.textContent = 'เริ่มงาน'; start.dataset.start = op.id;
+        act.append(start);
+      }
+    }
+  }
+  wrap.replaceChildren(table);
+}
+
+async function loadShopfloorOps(moId) {
+  try {
+    const {data, error} = await client.from('prod_mo_operations')
+      .select('id,seq,dept_code,status,qty_good,qty_reject').eq('mo_id', moId).order('seq');
+    if (error) throw error;
+    shopfloorOps = data;
+  } catch (error) { toast(cloudError(error)); shopfloorOps = []; }
+  renderShopfloorOps();
+}
+
+async function loadShopfloorMoList() {
+  try {
+    const {data, error} = await client.from('prod_manufacturing_orders')
+      .select('id,doc_no,item_id,qty,status').in('status', ['RELEASED', 'IN_PROGRESS']).order('created_at', {ascending: false});
+    if (error) throw error;
+    shopfloorMos = data;
+    options($('#shopfloor-mo'), shopfloorMos, m => m.id, m => `${m.doc_no} (${moStatusLabel(m.status)})`, '— เลือกใบสั่งผลิต —');
+    currentShopfloorMo = null; shopfloorOps = [];
+    renderShopfloorOps();
+  } catch (error) { toast(cloudError(error)); }
+}
+
+$('#shopfloor-mo').addEventListener('change', async () => {
+  const id = $('#shopfloor-mo').value;
+  currentShopfloorMo = shopfloorMos.find(m => m.id === id) ?? null;
+  if (!currentShopfloorMo) { shopfloorOps = []; renderShopfloorOps(); return; }
+  await loadShopfloorOps(id);
+});
+
+$('#shopfloor-ops-wrap').addEventListener('click', async event => {
+  const startButton = event.target.closest('button[data-start]');
+  const finishButton = event.target.closest('button[data-finish]');
+  if (startButton) {
+    startButton.disabled = true;
+    try {
+      const {error} = await client.from('prod_mo_operations')
+        .update({status: 'RUNNING', started_at: new Date().toISOString()}).eq('id', startButton.dataset.start);
+      if (error) throw error;
+      await loadShopfloorOps(currentShopfloorMo.id);
+    } catch (error) { toast(cloudError(error)); startButton.disabled = false; }
+    return;
+  }
+  if (finishButton) {
+    finishButton.disabled = true;
+    const opId = finishButton.dataset.finish;
+    const goodInput = $(`input[data-good="${opId}"]`), rejectInput = $(`input[data-reject="${opId}"]`);
+    const qtyGood = Number(goodInput?.value) || 0, qtyReject = Number(rejectInput?.value) || 0;
+    try {
+      const {error: updateError} = await client.from('prod_mo_operations')
+        .update({qty_good: qtyGood, qty_reject: qtyReject, status: 'DONE', finished_at: new Date().toISOString()})
+        .eq('id', opId);
+      if (updateError) throw updateError;
+
+      const finishedOp = shopfloorOps.find(op => op.id === opId);
+      // Routing steps commonly number 10, 20, 30... (see app.js's seed data), not
+      // strictly +1, so find the next step by smallest greater seq, not seq+1.
+      const nextOp = shopfloorOps.filter(op => op.seq > finishedOp.seq).sort((a, b) => a.seq - b.seq)[0];
+      if (nextOp) {
+        const {error: nextError} = await client.from('prod_mo_operations')
+          .update({status: 'READY'}).eq('id', nextOp.id);
+        if (nextError) throw nextError;
+      } else {
+        // Last step of the routing: receive the finished good into stock and close the MO.
+        const item = items.find(i => i.id === currentShopfloorMo.item_id);
+        const {error: receiptError} = await client.from('inv_stock_ledger').insert({
+          item_id: currentShopfloorMo.item_id, warehouse_code: MAIN_WAREHOUSE, txn_type: 'MO_RECEIPT',
+          ref_type: 'prod_manufacturing_orders', ref_id: currentShopfloorMo.id,
+          qty: qtyGood, unit_cost: item?.standard_cost ?? 0
+        });
+        if (receiptError) throw receiptError;
+        const {error: closeError} = await client.from('prod_manufacturing_orders')
+          .update({status: 'DONE'}).eq('id', currentShopfloorMo.id);
+        if (closeError) throw closeError;
+        toast(`ปิดใบสั่งผลิต ${currentShopfloorMo.doc_no} แล้ว รับสินค้าสำเร็จรูปเข้าคลัง ${qtyGood} หน่วย`);
+      }
+      await loadShopfloorOps(currentShopfloorMo.id);
+      await loadMoList();
+    } catch (error) { toast(cloudError(error)); finishButton.disabled = false; }
+  }
 });
 
 // ---- boot -------------------------------------------------------------------
