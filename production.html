@@ -1,0 +1,58 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>การผลิต • Item / BOM</title>
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="rb.css"><link rel="stylesheet" href="mrp.css"></head><body>
+<header class="rb-header"><div><small>MNP ERP / PRODUCTION</small><h1>ฝั่งการผลิต — Item Master &amp; BOM</h1></div><a href="connect.html">เชื่อม Supabase</a><a href="index.html">กลับ ERP</a></header>
+<main class="rb-main">
+<p class="notice" id="auth-status">กำลังตรวจสถานะเข้าสู่ระบบ…</p>
+
+<section class="card" id="gate">
+  <h2>ต้องเข้าสู่ระบบก่อน</h2>
+  <p class="muted">หน้านี้อ่าน/เขียนฐานข้อมูลจริงและมี RLS คุ้มครอง ต้องเข้าสู่ระบบด้วยบัญชี Supabase Auth ก่อน</p>
+  <a class="primary" href="connect.html" style="display:inline-flex;align-items:center;min-height:38px;padding:7px 16px;border-radius:6px;text-decoration:none">ไปหน้าเข้าสู่ระบบ</a>
+</section>
+
+<div id="workspace" hidden>
+<section class="card" id="items-card">
+  <div class="head"><h2>Item Master</h2><span class="muted" id="items-count"></span></div>
+  <div class="scroll" id="items-wrap"><p class="empty">กำลังโหลด…</p></div>
+  <form id="item-form" class="mrp-grid" style="margin-top:14px">
+    <label>รหัสสินค้า<input id="item-code" required maxlength="40"></label>
+    <label>ชื่อ<input id="item-name" required maxlength="120"></label>
+    <label>ประเภท<select id="item-type">
+      <option value="FG">สินค้าสำเร็จรูป (FG)</option>
+      <option value="RM">วัตถุดิบ (RM)</option>
+      <option value="WIP">ระหว่างผลิต (WIP)</option>
+      <option value="SERVICE">บริการ (SERVICE)</option>
+    </select></label>
+    <label>หน่วยนับ<select id="item-uom"></select></label>
+    <label>ต้นทุนมาตรฐาน<input id="item-cost" type="number" min="0" step="any" value="0"></label>
+    <label>ราคาขาย<input id="item-price" type="number" min="0" step="any" value="0"></label>
+    <div class="actions"><button type="submit" class="primary">เพิ่มสินค้า</button><span class="muted" id="item-status"></span></div>
+  </form>
+</section>
+
+<section class="card" id="bom-card">
+  <div class="head"><h2>วาง BOM</h2></div>
+  <div class="mrp-grid">
+    <label>สินค้าสำเร็จรูป (FG)<select id="bom-item"></select></label>
+    <label>เวอร์ชัน BOM<select id="bom-version"></select></label>
+    <label>เวอร์ชันใหม่<input id="bom-new-version-text" placeholder="เช่น BOM-01" maxlength="40"></label>
+  </div>
+  <div class="actions"><button id="bom-new-version" type="button">สร้างเวอร์ชันใหม่</button><span class="muted" id="bom-status">เลือกสินค้า FG ก่อน</span></div>
+
+  <div class="scroll" id="bom-lines-wrap" style="margin-top:14px"><p class="empty">ยังไม่ได้เลือกเวอร์ชัน BOM</p></div>
+
+  <form id="line-form" class="mrp-grid" style="margin-top:14px">
+    <label>วัตถุดิบ/ชิ้นส่วน<select id="line-component"></select></label>
+    <label>จำนวนต่อหน่วย<input id="line-qty" type="number" min="0" step="any" required></label>
+    <label>สูญเสีย (%)<input id="line-scrap" type="number" min="0" max="100" step="any" value="0"></label>
+    <label>แผนกที่ใช้<select id="line-dept"></select></label>
+    <div class="actions"><button type="submit" class="primary" id="line-submit" disabled>เพิ่มเข้า BOM</button><span class="muted" id="line-status"></span></div>
+  </form>
+</section>
+</div>
+</main>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="vendor/supabase.js"></script>
+<script type="module" src="production.js"></script>
+</body></html>
