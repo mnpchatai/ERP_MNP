@@ -1,7 +1,7 @@
 <!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>การผลิต • Item / BOM</title>
+<title>การผลิต • Item / BOM / Routing / MO</title>
 <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="rb.css"><link rel="stylesheet" href="mrp.css"></head><body>
-<header class="rb-header"><div><small>MNP ERP / PRODUCTION</small><h1>ฝั่งการผลิต — Item Master &amp; BOM</h1></div><a href="connect.html">เชื่อม Supabase</a><a href="index.html">กลับ ERP</a></header>
+<header class="rb-header"><div><small>MNP ERP / PRODUCTION</small><h1>ฝั่งการผลิต — Item, BOM, Routing, ใบสั่งผลิต</h1></div><a href="connect.html">เชื่อม Supabase</a><a href="index.html">กลับ ERP</a></header>
 <main class="rb-main">
 <p class="notice" id="auth-status">กำลังตรวจสถานะเข้าสู่ระบบ…</p>
 
@@ -49,6 +49,39 @@
     <label>แผนกที่ใช้<select id="line-dept"></select></label>
     <div class="actions"><button type="submit" class="primary" id="line-submit" disabled>เพิ่มเข้า BOM</button><span class="muted" id="line-status"></span></div>
   </form>
+</section>
+
+<section class="card" id="routing-card">
+  <div class="head"><h2>วาง Routing</h2></div>
+  <div class="mrp-grid">
+    <label>สินค้าสำเร็จรูป (FG)<select id="routing-item"></select></label>
+    <label>เวอร์ชัน Routing<select id="routing-version"></select></label>
+    <label>เวอร์ชันใหม่<input id="routing-new-version-text" placeholder="เช่น R-01" maxlength="40"></label>
+  </div>
+  <div class="actions"><button id="routing-new-version" type="button">สร้างเวอร์ชันใหม่</button><span class="muted" id="routing-status">เลือกสินค้า FG ก่อน</span></div>
+
+  <div class="scroll" id="routing-steps-wrap" style="margin-top:14px"><p class="empty">ยังไม่ได้เลือกเวอร์ชัน Routing</p></div>
+
+  <form id="step-form" class="mrp-grid" style="margin-top:14px">
+    <label>ลำดับ (Seq)<input id="step-seq" type="number" min="1" step="1" required></label>
+    <label>แผนก<select id="step-dept"></select></label>
+    <label>เป้าหมาย/ชั่วโมง<input id="step-target" type="number" min="0" step="any" required></label>
+    <label>เวลาติดตั้ง (นาที)<input id="step-setup" type="number" min="0" step="any" value="0"></label>
+    <div class="actions"><button type="submit" class="primary" id="step-submit" disabled>เพิ่ม Step</button><span class="muted" id="step-status"></span></div>
+  </form>
+</section>
+
+<section class="card" id="mo-card">
+  <div class="head"><h2>เปิดใบสั่งผลิต (Manufacturing Order)</h2></div>
+  <form id="mo-form" class="mrp-grid">
+    <label>สินค้าสำเร็จรูป (FG)<select id="mo-item"></select></label>
+    <label>จำนวนสั่งผลิต<input id="mo-qty" type="number" min="0.0001" step="any" required></label>
+    <label>BOM ที่ใช้<select id="mo-bom"></select></label>
+    <label>Routing ที่ใช้<select id="mo-routing"></select></label>
+    <label>กำหนดส่ง<input id="mo-due" type="date"></label>
+    <div class="actions"><button type="submit" class="primary" id="mo-submit" disabled>เปิดใบสั่งผลิต</button><span class="muted" id="mo-status"></span></div>
+  </form>
+  <div class="scroll" id="mo-list-wrap" style="margin-top:14px"><p class="empty">กำลังโหลด…</p></div>
 </section>
 </div>
 </main>
