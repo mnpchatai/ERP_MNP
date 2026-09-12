@@ -75,12 +75,26 @@
       </div>
     </fieldset>
 
+    <fieldset class="wide" id="item-bom-fieldset">
+      <legend>วัตถุดิบที่ใช้ (BOM)</legend>
+      <p class="muted small">กรอกวัตถุดิบที่ใช้ตรงนี้ได้เลย ระบบจะสร้าง BOM เวอร์ชันแรก (BOM-01) ให้อัตโนมัติตอนบันทึกสินค้า — ไม่ต้องไปหน้า "วาง BOM" แยกต่างหาก เว้นแต่ต้องการแก้ไข/เพิ่มเวอร์ชันใหม่ทีหลัง</p>
+      <div class="line-rows" id="item-bom-rows"></div>
+      <button type="button" id="item-bom-add">+ เพิ่มวัตถุดิบ</button>
+    </fieldset>
+
+    <fieldset class="wide" id="item-routing-fieldset">
+      <legend>ขั้นตอนการผลิต (Routing)</legend>
+      <p class="muted small">เรียงแถวตามลำดับที่ต้องทำจริง ระบบกำหนดลำดับ (Seq) ให้อัตโนมัติเป็น 10, 20, 30… และสร้าง Routing เวอร์ชันแรก (R-01) ให้พร้อมกัน</p>
+      <div class="line-rows" id="item-routing-rows"></div>
+      <button type="button" id="item-routing-add">+ เพิ่มขั้นตอน</button>
+    </fieldset>
+
     <div class="actions"><button type="submit" class="primary">บันทึก</button><button type="reset">ล้างข้อมูล</button><span class="muted" id="item-status"></span></div>
   </form>
 </section>
 
 <section class="card" id="bom-card">
-  <div class="head"><h2>วาง BOM</h2></div>
+  <div class="head"><h2>วาง BOM (แก้ไข/เพิ่มเวอร์ชันใหม่)</h2></div>
   <div class="mrp-grid">
     <label>สินค้าสำเร็จรูป (FG)<select id="bom-item"></select></label>
     <label>เวอร์ชัน BOM<select id="bom-version"></select></label>
@@ -100,7 +114,7 @@
 </section>
 
 <section class="card" id="routing-card">
-  <div class="head"><h2>วาง Routing</h2></div>
+  <div class="head"><h2>วาง Routing (แก้ไข/เพิ่มเวอร์ชันใหม่)</h2></div>
   <div class="mrp-grid">
     <label>สินค้าสำเร็จรูป (FG)<select id="routing-item"></select></label>
     <label>เวอร์ชัน Routing<select id="routing-version"></select></label>

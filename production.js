@@ -87,6 +87,8 @@ function populateItemPickers() {
   options($('#routing-item'), fgItems, i => i.id, itemLabel, '— เลือกสินค้า —');
   options($('#step-dept'), depts, d => d.code, deptLabel, '— เลือกแผนก —');
   options($('#mo-item'), fgItems, i => i.id, itemLabel, '— เลือกสินค้า —');
+  resetLineRows();
+  toggleItemLineFieldsets();
 }
 
 async function loadMaster() {
@@ -128,6 +130,75 @@ function textOrNull(id) {
   return v === '' ? null : v;
 }
 
+// ---- inline BOM/Routing rows on the item form -----------------------------
+// Lets a new FG item's materials and process steps be entered in the same
+// form instead of requiring a separate trip to the "วาง BOM"/"วาง Routing"
+// cards; on submit these become that item's first BOM/Routing version.
+function newSelect(className) { const el = document.createElement('select'); el.className = className; return el; }
+function newInput(className, attrs) { const el = document.createElement('input'); el.className = className; Object.assign(el, attrs); return el; }
+
+function addLineRow(container, rowClass, fields) {
+  const row = document.createElement('div');
+  row.className = rowClass;
+  for (const field of fields) row.append(field);
+  const remove = document.createElement('button');
+  remove.type = 'button'; remove.className = 'row-remove'; remove.textContent = 'ลบ';
+  remove.addEventListener('click', () => row.remove());
+  row.append(remove);
+  container.append(row);
+}
+
+function addBomRow() {
+  const component = newSelect('bom-row-component');
+  options(component, items, i => i.id, itemLabel, '— เลือกวัตถุดิบ —');
+  const qty = newInput('bom-row-qty', {type: 'number', min: '0', step: 'any', placeholder: 'จำนวนต่อหน่วย'});
+  const scrap = newInput('bom-row-scrap', {type: 'number', min: '0', max: '100', step: 'any', placeholder: 'สูญเสีย %', value: '0'});
+  const dept = newSelect('bom-row-dept');
+  options(dept, depts, d => d.code, deptLabel, '— แผนกที่ใช้ —');
+  addLineRow($('#item-bom-rows'), 'line-row', [component, qty, scrap, dept]);
+}
+
+function addRoutingRow() {
+  const dept = newSelect('routing-row-dept');
+  options(dept, depts, d => d.code, deptLabel, '— แผนก —');
+  const target = newInput('routing-row-target', {type: 'number', min: '0', step: 'any', placeholder: 'เป้าหมาย/ชั่วโมง'});
+  const setup = newInput('routing-row-setup', {type: 'number', min: '0', step: 'any', placeholder: 'เวลาติดตั้ง (นาที)', value: '0'});
+  addLineRow($('#item-routing-rows'), 'line-row routing-row', [dept, target, setup]);
+}
+
+function resetLineRows() {
+  $('#item-bom-rows').replaceChildren(); addBomRow();
+  $('#item-routing-rows').replaceChildren(); addRoutingRow();
+}
+
+function toggleItemLineFieldsets() {
+  const isFg = $('#item-type').value === 'FG';
+  $('#item-bom-fieldset').hidden = !isFg;
+  $('#item-routing-fieldset').hidden = !isFg;
+}
+
+function collectBomRows() {
+  return [...document.querySelectorAll('#item-bom-rows .line-row')].map(row => ({
+    component: row.querySelector('.bom-row-component').value,
+    qty: row.querySelector('.bom-row-qty').value,
+    scrap: row.querySelector('.bom-row-scrap').value,
+    dept: row.querySelector('.bom-row-dept').value
+  })).filter(r => r.component && r.qty !== '');
+}
+
+function collectRoutingRows() {
+  return [...document.querySelectorAll('#item-routing-rows .line-row')].map(row => ({
+    dept: row.querySelector('.routing-row-dept').value,
+    target: row.querySelector('.routing-row-target').value,
+    setup: row.querySelector('.routing-row-setup').value
+  })).filter(r => r.dept && r.target !== '');
+}
+
+$('#item-bom-add').addEventListener('click', addBomRow);
+$('#item-routing-add').addEventListener('click', addRoutingRow);
+$('#item-type').addEventListener('change', toggleItemLineFieldsets);
+$('#item-form').addEventListener('reset', resetLineRows);
+
 $('#item-form').addEventListener('submit', async event => {
   event.preventDefault();
   const nameTh = $('#item-name').value.trim();
@@ -136,12 +207,16 @@ $('#item-form').addEventListener('submit', async event => {
   const badField = badNameOrCode(nameTh, 'ชื่อไทย') || badNameOrCode(nameEn, 'ชื่ออังกฤษ') || badNameOrCode(code, 'รหัส');
   if (badField) { $('#item-status').textContent = badField; toast(badField); return; }
 
+  const isFg = $('#item-type').value === 'FG';
+  const bomRows = isFg ? collectBomRows() : [];
+  const routingRows = isFg ? collectRoutingRows() : [];
+
   const button = event.target.querySelector('button[type="submit"]');
   button.disabled = true; $('#item-status').textContent = 'กำลังบันทึก…';
   try {
     const dimUom = $('#item-dim-uom').value;
     const weightUom = $('#item-weight-uom').value;
-    const {error} = await client.from('mst_items').insert({
+    const {data: newItem, error} = await client.from('mst_items').insert({
       code,
       name: nameTh,
       name_en: nameEn,
@@ -171,11 +246,46 @@ $('#item-form').addEventListener('submit', async event => {
       scrap_qty: numOrNull('#item-scrap-qty'),
       valid_from: $('#item-valid-from').value || null,
       valid_to: $('#item-valid-to').value || null
-    });
+    }).select('id').single();
     if (error) throw error;
+
+    // The item itself already exists at this point — a BOM/Routing insert
+    // failing below leaves the item behind without them, same known gap as
+    // the rest of this module until a real service layer exists (see
+    // docs/DATA-LAYER.md). The status line says which step failed so the
+    // missing BOM/Routing can be added by hand via the cards below meanwhile.
+    if (bomRows.length) {
+      $('#item-status').textContent = 'บันทึกสินค้าแล้ว กำลังสร้าง BOM…';
+      const {data: bom, error: bomError} = await client.from('prod_boms')
+        .insert({item_id: newItem.id, version: 'BOM-01'}).select('id').single();
+      if (bomError) throw bomError;
+      const lines = bomRows.map(r => ({
+        bom_id: bom.id, component_item_id: r.component,
+        qty_per_unit: Number(r.qty), scrap_pct: (Number(r.scrap) || 0) / 100,
+        dept_code: r.dept || null
+      }));
+      const {error: linesError} = await client.from('prod_bom_lines').insert(lines);
+      if (linesError) throw linesError;
+    }
+
+    if (routingRows.length) {
+      $('#item-status').textContent = 'บันทึกสินค้าแล้ว กำลังสร้าง Routing…';
+      const {data: routing, error: routingError} = await client.from('prod_routings')
+        .insert({item_id: newItem.id, version: 'R-01'}).select('id').single();
+      if (routingError) throw routingError;
+      const steps = routingRows.map((r, index) => ({
+        routing_id: routing.id, seq: (index + 1) * 10,
+        dept_code: r.dept, target_per_hour: Number(r.target), setup_minutes: Number(r.setup) || 0
+      }));
+      const {error: stepsError} = await client.from('prod_routing_steps').insert(steps);
+      if (stepsError) throw stepsError;
+    }
+
     event.target.reset();
-    $('#item-status').textContent = 'เพิ่มสินค้าแล้ว';
-    toast('เพิ่มสินค้าแล้ว');
+    const extra = [bomRows.length && 'BOM', routingRows.length && 'Routing'].filter(Boolean).join(' + ');
+    const message = extra ? `เพิ่มสินค้าแล้ว พร้อม ${extra} เวอร์ชันแรก` : 'เพิ่มสินค้าแล้ว';
+    $('#item-status').textContent = message;
+    toast(message);
     await loadMaster();
   } catch (error) { $('#item-status').textContent = cloudError(error); }
   finally { button.disabled = false; }
