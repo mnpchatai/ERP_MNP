@@ -1,7 +1,7 @@
 <!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>การผลิต • Item / BOM / Routing / MO</title>
-<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="rb.css"><link rel="stylesheet" href="mrp.css"><link rel="stylesheet" href="production.css"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="theme.css"></head><body>
-<header class="rb-header"><div><small>MNP ERP / PRODUCTION</small><h1>ฝั่งการผลิต — Item, BOM, Routing, ใบสั่งผลิต</h1></div><a href="connect.html">เชื่อม Supabase</a><a href="index.html">กลับ ERP</a></header>
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="rb.css"><link rel="stylesheet" href="mrp.css"><link rel="stylesheet" href="production.css"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="theme.css"><script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('mnp-theme')||'light')}catch(e){}</script></head><body>
+<header class="rb-header"><div><small>MNP ERP / PRODUCTION</small><h1>ฝั่งการผลิต — Item, BOM, Routing, ใบสั่งผลิต</h1></div><button type="button" class="theme-toggle" data-theme-toggle aria-label="สลับโหมดสี" title="สลับโหมดสี (Light/Dark)"><svg class="icon icon-sun" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><svg class="icon icon-moon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg></button><a href="connect.html">เชื่อม Supabase</a><a href="index.html">กลับ ERP</a></header>
 <main class="rb-main">
 <p class="notice" id="auth-status">กำลังตรวจสถานะเข้าสู่ระบบ…</p>
 
@@ -146,5 +146,6 @@
 </main>
 <div id="toast" role="status" aria-live="polite"></div>
 <script src="vendor/supabase.js"></script>
+<script src="theme.js"></script>
 <script type="module" src="production.js"></script>
 </body></html>

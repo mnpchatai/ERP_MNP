@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#ffffff">
   <meta name="description" content="MNP ERP — ภาพรวมคำสั่งซื้อ วางแผนการผลิต และจัดการวัตถุดิบ">
   <title>ภาพรวม | MNP ERP</title>
+  <script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('mnp-theme')||'light')}catch(e){}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="styles.css">
@@ -34,7 +35,7 @@
     <button id="menu" aria-label="เปิดเมนู" aria-expanded="false" aria-controls="sidebar"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
     <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">M</span><span><b>MNP ERP <span class="brand-erp">/ PRODUCTION</span></b><small>ระบบวางแผนและติดตามกระบวนการผลิต</small></span></a>
   </div>
-  <div class="masthead-actions"><span class="environment-badge">SIMULATION</span><a href="mrp.html" class="masthead-link" aria-label="คำนวณวัตถุดิบ"><svg class="icon" aria-hidden="true"><use href="#i-calc"/></svg><span>คำนวณวัตถุดิบ</span></a><a href="connect.html" class="masthead-link" aria-label="เชื่อมต่อฐานข้อมูล"><svg class="icon" aria-hidden="true"><use href="#i-connect"/></svg><span>เชื่อมต่อฐานข้อมูล</span></a></div>
+  <div class="masthead-actions"><button type="button" class="theme-toggle" data-theme-toggle aria-label="สลับโหมดสี" title="สลับโหมดสี (Light/Dark)"><svg class="icon icon-sun" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><svg class="icon icon-moon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg></button><span class="environment-badge">SIMULATION</span><a href="mrp.html" class="masthead-link" aria-label="คำนวณวัตถุดิบ"><svg class="icon" aria-hidden="true"><use href="#i-calc"/></svg><span>คำนวณวัตถุดิบ</span></a><a href="connect.html" class="masthead-link" aria-label="เชื่อมต่อฐานข้อมูล"><svg class="icon" aria-hidden="true"><use href="#i-connect"/></svg><span>เชื่อมต่อฐานข้อมูล</span></a></div>
 </header>
 <div class="layout">
   <aside id="sidebar" aria-label="เมนูหลัก">
@@ -67,6 +68,7 @@
 </div>
 <dialog id="modal" aria-label="รายละเอียดและแบบฟอร์ม"><form method="dialog" id="modal-content"></form></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
+<script src="theme.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
