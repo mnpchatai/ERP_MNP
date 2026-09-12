@@ -1,4 +1,74 @@
-<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#06085d"><title>MNP ERP Simulation</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="theme.css"></head><body>
-<div class="layout"><aside><h2>MNP ERP</h2><small>PRODUCTION SIMULATION</small><nav id="nav"><button data-view="dashboard" class="active">ภาพรวม</button><button data-view="orders">คำสั่งซื้อลูกค้า</button><button data-view="bom">วาง BOM ทุกแผนก</button><a class="nav-link" href="mrp.html">MAIN — คำนวณวัตถุดิบ</a><button data-view="production">ใบสั่งผลิต</button><button data-view="shopfloor">หน้างานผลิต</button><button data-view="inventory">คลังวัตถุดิบ</button><button data-view="iot">IoT Monitor</button></nav><p class="sim">SIMULATION<br><span>ข้อมูลอยู่ใน Browser เครื่องนี้</span></p></aside>
-<main><header><button id="menu" aria-label="เปิดเมนู">☰</button><div><h1 id="title">ภาพรวม</h1><small id="date"></small></div><a href="mrp.html">MAIN — คำนวณวัตถุดิบ</a><a href="connect.html">เชื่อม Supabase</a><button id="reset">คืนค่าข้อมูลจำลอง</button></header><p class="sim">รุ่นทดลอง — ยังไม่เปิดบันทึกฐานข้อมูลจริงหรือรับรองความตรงกับ Excel ทั้งระบบ</p><section id="content" aria-live="polite"></section></main></div>
-<dialog id="modal"><form method="dialog" id="modal-content"></form></dialog><div id="toast" role="status" aria-live="polite"></div><script src="app.js"></script></body></html>
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="MNP ERP — ภาพรวมคำสั่งซื้อ วางแผนการผลิต และจัดการวัตถุดิบ">
+  <title>ภาพรวม | MNP ERP</title>
+  <script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('mnp-theme')||'light')}catch(e){}</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-order" viewBox="0 0 24 24"><path d="M8 4H5v17h14V4h-3M9 11h6m-6 4h4"/><rect x="8" y="2" width="8" height="5" rx="1.5"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 10 5-10 5L2 8Zm-10 9 10 5 10-5M2 17l10 5 10-5"/></symbol>
+  <symbol id="i-calc" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="3"/><path d="M8 6h8M8 11h1m6 0h1m-8 4h1m6 0h1m-8 4h1m6 0h1"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="m12 2 9 5v10l-9 5-9-5V7Zm0 10L3 7m9 5 9-5m-9 5v10M7.5 4.5l9 5"/></symbol>
+  <symbol id="i-factory" viewBox="0 0 24 24"><path d="M3 21V3h4v10l7-4v4l7-4v12ZM7 17h1m4 0h1m4 0h1"/></symbol>
+  <symbol id="i-activity" viewBox="0 0 24 24"><path d="M2 12h5l3-8 4 16 3-8h5"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v1"/></symbol>
+  <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 10a9 9 0 1 1 2 8M3 4v6h6"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+  <symbol id="i-connect" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v7c0 4 16 4 16 0V5M4 12v7c0 4 16 4 16 0v-7"/></symbol>
+</defs></svg>
+<a class="skip-link" href="#content">ข้ามไปยังเนื้อหา</a>
+<header class="app-masthead">
+  <div class="masthead-identity">
+    <button id="menu" aria-label="เปิดเมนู" aria-expanded="false" aria-controls="sidebar"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+    <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">M</span><span><b>MNP ERP <span class="brand-erp">/ PRODUCTION</span></b><small>ระบบวางแผนและติดตามกระบวนการผลิต</small></span></a>
+  </div>
+  <div class="masthead-actions"><button type="button" class="theme-toggle" data-theme-toggle aria-label="สลับโหมดสี" title="สลับโหมดสี (Light/Dark)"><svg class="icon icon-sun" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><svg class="icon icon-moon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg></button><span class="environment-badge">SIMULATION</span><a href="mrp.html" class="masthead-link" aria-label="คำนวณวัตถุดิบ"><svg class="icon" aria-hidden="true"><use href="#i-calc"/></svg><span>คำนวณวัตถุดิบ</span></a><a href="connect.html" class="masthead-link" aria-label="เชื่อมต่อฐานข้อมูล"><svg class="icon" aria-hidden="true"><use href="#i-connect"/></svg><span>เชื่อมต่อฐานข้อมูล</span></a></div>
+</header>
+<div class="layout">
+  <aside id="sidebar" aria-label="เมนูหลัก">
+    <div class="workspace-card"><div class="workspace-card-title"><span class="workspace-avatar"><svg class="icon" aria-hidden="true"><use href="#i-factory"/></svg></span><div><b>MNP Workspace</b><small>พื้นที่วางแผนการผลิต</small></div></div><div class="workspace-card-meta"><span>ข้อมูลในเครื่องนี้</span><span class="workspace-tag">DEMO</span></div></div>
+    <nav id="nav" aria-label="พื้นที่ทำงาน">
+      <span class="nav-caption">ภาพรวมระบบ</span>
+      <button data-view="dashboard" class="active" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg><span>ภาพรวม</span></button>
+      <button data-view="orders"><svg class="icon" aria-hidden="true"><use href="#i-order"/></svg><span>คำสั่งซื้อลูกค้า</span><span id="order-count" class="nav-count"></span></button>
+      <span class="nav-caption">การผลิตและวัตถุดิบ</span>
+      <button data-view="bom"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span>วาง BOM ทุกแผนก</span></button>
+      <button data-view="production"><svg class="icon" aria-hidden="true"><use href="#i-factory"/></svg><span>ใบสั่งผลิต</span></button>
+      <button data-view="shopfloor"><svg class="icon" aria-hidden="true"><use href="#i-activity"/></svg><span>หน้างานผลิต</span></button>
+      <a class="nav-link" href="mrp.html"><svg class="icon" aria-hidden="true"><use href="#i-calc"/></svg><span>คำนวณวัตถุดิบ <small>MRP</small></span></a>
+      <span class="nav-caption">ข้อมูลหลักและคลังสินค้า</span>
+      <a class="nav-link" href="production.html"><svg class="icon" aria-hidden="true"><use href="#i-connect"/></svg><span>Item / BOM <small>ข้อมูลจริง</small></span></a>
+      <button data-view="inventory"><svg class="icon" aria-hidden="true"><use href="#i-box"/></svg><span>คลังวัตถุดิบ</span></button>
+      <button data-view="iot"><svg class="icon" aria-hidden="true"><use href="#i-activity"/></svg><span>IoT Monitor</span></button>
+    </nav>
+    <div class="sidebar-bottom"><a class="connection-link" href="connect.html"><svg class="icon" aria-hidden="true"><use href="#i-connect"/></svg>เชื่อมต่อฐานข้อมูล<svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a><p class="sim"><span class="simulation-label">SIMULATION</span><span>ข้อมูลจำลองเก็บในเบราว์เซอร์เครื่องนี้</span></p></div>
+  </aside>
+  <button class="menu-backdrop" id="menu-backdrop" aria-label="ปิดเมนู" tabindex="-1" hidden></button>
+  <main>
+    <header>
+      <div class="breadcrumb"><span>พื้นที่ทำงาน</span><span aria-hidden="true">/</span><h1 id="title">ภาพรวม</h1></div>
+      <div class="header-tools"><small id="date"></small><button id="reset" title="คืนค่าข้อมูลจำลอง" aria-label="คืนค่าข้อมูลจำลอง"><svg class="icon" aria-hidden="true"><use href="#i-reset"/></svg><span>คืนค่าข้อมูล</span></button></div>
+    </header>
+    <section id="content" aria-live="polite" tabindex="-1"></section>
+    <p class="sim workspace-notice"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span>รุ่นทดลอง — ยังไม่เปิดบันทึกฐานข้อมูลจริงหรือรับรองความตรงกับ Excel ทั้งระบบ</span></p>
+  </main>
+</div>
+<dialog id="modal" aria-label="รายละเอียดและแบบฟอร์ม"><form method="dialog" id="modal-content"></form></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="theme.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

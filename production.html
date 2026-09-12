@@ -1,0 +1,151 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>การผลิต • Item / BOM / Routing / MO</title>
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="rb.css"><link rel="stylesheet" href="mrp.css"><link rel="stylesheet" href="production.css"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="theme.css"><script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('mnp-theme')||'light')}catch(e){}</script></head><body>
+<header class="rb-header"><div><small>MNP ERP / PRODUCTION</small><h1>ฝั่งการผลิต — Item, BOM, Routing, ใบสั่งผลิต</h1></div><button type="button" class="theme-toggle" data-theme-toggle aria-label="สลับโหมดสี" title="สลับโหมดสี (Light/Dark)"><svg class="icon icon-sun" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><svg class="icon icon-moon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg></button><a href="connect.html">เชื่อม Supabase</a><a href="index.html">กลับ ERP</a></header>
+<main class="rb-main">
+<p class="notice" id="auth-status">กำลังตรวจสถานะเข้าสู่ระบบ…</p>
+
+<section class="card" id="gate">
+  <h2>ต้องเข้าสู่ระบบก่อน</h2>
+  <p class="muted">หน้านี้อ่าน/เขียนฐานข้อมูลจริงและมี RLS คุ้มครอง ต้องเข้าสู่ระบบด้วยบัญชี Supabase Auth ก่อน</p>
+  <a class="primary" href="connect.html" style="display:inline-flex;align-items:center;min-height:38px;padding:7px 16px;border-radius:6px;text-decoration:none">ไปหน้าเข้าสู่ระบบ</a>
+</section>
+
+<div id="workspace" hidden>
+<section class="card" id="items-card">
+  <div class="head"><h2>Item Master</h2><span class="muted" id="items-count"></span></div>
+  <div class="scroll" id="items-wrap"><p class="empty">กำลังโหลด…</p></div>
+  <div class="item-warning">
+    <span aria-hidden="true">⚠</span>
+    <div><strong>ข้อควรระวัง:</strong>
+      <ol>
+        <li>ห้ามใช้สัญลักษณ์นำหน้า "ชื่อ"/"รหัส"</li>
+        <li>ห้ามใช้ \ ใน "ชื่อ"/"รหัส"</li>
+        <li>ห้ามใช้ ' (single quote)</li>
+      </ol>
+    </div>
+  </div>
+
+  <form id="item-form" class="item-form" style="margin-top:10px">
+    <fieldset>
+      <legend>ข้อมูลสินค้า</legend>
+      <div class="grid">
+        <label><span class="req">ชื่อไทย</span><input id="item-name" required maxlength="120"></label>
+        <label><span class="req">ชื่ออังกฤษ</span><input id="item-name-en" required maxlength="120"></label>
+        <label><span class="req">รหัส</span><input id="item-code" required maxlength="40"></label>
+        <label>เสริม<input id="item-code-secondary" maxlength="40"></label>
+        <label>บาร์โค้ด<input id="item-barcode" maxlength="64"></label>
+        <label><span class="req">ประเภท</span><select id="item-type">
+          <option value="FG">FG</option>
+          <option value="RM">RM</option>
+          <option value="WIP">WIP</option>
+          <option value="SERVICE">SERVICE</option>
+        </select></label>
+        <label><span class="req">หน่วย</span><select id="item-uom" required></select></label>
+        <label>หน่วยย่อย<select id="item-uom-secondary"></select></label>
+        <label>จำนวน/หน่วยหลัก<input id="item-uom-secondary-qty" type="number" min="0" step="any"></label>
+        <label>คลาส<input id="item-class" maxlength="40" placeholder="Process"></label>
+        <label>ไทป์<input id="item-subtype" maxlength="40" placeholder="วัตถุดิบ/สินค้า"></label>
+        <label>กรุ๊ป<input id="item-group" maxlength="40" placeholder="RB, GR, PT…"></label>
+        <label>ต้นทุนมาตรฐาน<input id="item-cost" type="number" min="0" step="any" value="0"></label>
+        <label>ราคาขาย<input id="item-price" type="number" min="0" step="any" value="0"></label>
+        <label>วันที่เริ่ม<input id="item-valid-from" type="date"></label>
+        <label>ถึง<input id="item-valid-to" type="date"></label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>รายละเอียด / มิติ / น้ำหนัก</legend>
+      <div class="grid">
+        <label class="wide">รายละเอียด<textarea id="item-description" maxlength="2000"></textarea></label>
+        <label>รูปทรง<input id="item-shape" maxlength="60"></label>
+        <label>หน่วยมิติ<select id="item-dim-uom"><option value="mm">mm</option><option value="cm">cm</option><option value="m">m</option><option value="inch">inch</option></select></label>
+        <label>ยาว<input id="item-dim-length" type="number" min="0" step="any"></label>
+        <label>กว้าง<input id="item-dim-width" type="number" min="0" step="any"></label>
+        <label>หนา<input id="item-dim-thickness" type="number" min="0" step="any"></label>
+        <label>สูง<input id="item-dim-height" type="number" min="0" step="any"></label>
+        <label>ขนาด<input id="item-size" type="number" min="0" step="any"></label>
+        <label>ปริมาตร<div class="pair"><input id="item-volume" type="number" min="0" step="any"><select id="item-volume-uom"><option value="M3">m³</option><option value="CM3">cm³</option><option value="L">ลิตร</option></select></div></label>
+        <label>Process (นาที/ชิ้น)<input id="item-process-time" type="number" min="0" step="any"></label>
+        <label>หน่วยน้ำหนัก<select id="item-weight-uom"><option value="KG">KG</option><option value="GR">GR</option><option value="Ct">Ct</option></select></label>
+        <label>น้ำหนักต่ำสุด<input id="item-weight-min" type="number" min="0" step="any"></label>
+        <label>น้ำหนัก/ชิ้น<input id="item-weight-per-piece" type="number" min="0" step="any"></label>
+        <label>น้ำหนักสูงสุด<input id="item-weight-max" type="number" min="0" step="any"></label>
+        <label>จำนวนสูญเสีย<input id="item-scrap-qty" type="number" min="0" step="any"></label>
+      </div>
+    </fieldset>
+
+    <div class="actions"><button type="submit" class="primary">บันทึก</button><button type="reset">ล้างข้อมูล</button><span class="muted" id="item-status"></span></div>
+  </form>
+</section>
+
+<section class="card" id="bom-card">
+  <div class="head"><h2>วาง BOM</h2></div>
+  <div class="mrp-grid">
+    <label>สินค้าสำเร็จรูป (FG)<select id="bom-item"></select></label>
+    <label>เวอร์ชัน BOM<select id="bom-version"></select></label>
+    <label>เวอร์ชันใหม่<input id="bom-new-version-text" placeholder="เช่น BOM-01" maxlength="40"></label>
+  </div>
+  <div class="actions"><button id="bom-new-version" type="button">สร้างเวอร์ชันใหม่</button><span class="muted" id="bom-status">เลือกสินค้า FG ก่อน</span></div>
+
+  <div class="scroll" id="bom-lines-wrap" style="margin-top:14px"><p class="empty">ยังไม่ได้เลือกเวอร์ชัน BOM</p></div>
+
+  <form id="line-form" class="mrp-grid" style="margin-top:14px">
+    <label>วัตถุดิบ/ชิ้นส่วน<select id="line-component"></select></label>
+    <label>จำนวนต่อหน่วย<input id="line-qty" type="number" min="0" step="any" required></label>
+    <label>สูญเสีย (%)<input id="line-scrap" type="number" min="0" max="100" step="any" value="0"></label>
+    <label>แผนกที่ใช้<select id="line-dept"></select></label>
+    <div class="actions"><button type="submit" class="primary" id="line-submit" disabled>เพิ่มเข้า BOM</button><span class="muted" id="line-status"></span></div>
+  </form>
+</section>
+
+<section class="card" id="routing-card">
+  <div class="head"><h2>วาง Routing</h2></div>
+  <div class="mrp-grid">
+    <label>สินค้าสำเร็จรูป (FG)<select id="routing-item"></select></label>
+    <label>เวอร์ชัน Routing<select id="routing-version"></select></label>
+    <label>เวอร์ชันใหม่<input id="routing-new-version-text" placeholder="เช่น R-01" maxlength="40"></label>
+  </div>
+  <div class="actions"><button id="routing-new-version" type="button">สร้างเวอร์ชันใหม่</button><span class="muted" id="routing-status">เลือกสินค้า FG ก่อน</span></div>
+
+  <div class="scroll" id="routing-steps-wrap" style="margin-top:14px"><p class="empty">ยังไม่ได้เลือกเวอร์ชัน Routing</p></div>
+
+  <form id="step-form" class="mrp-grid" style="margin-top:14px">
+    <label>ลำดับ (Seq)<input id="step-seq" type="number" min="1" step="1" required></label>
+    <label>แผนก<select id="step-dept"></select></label>
+    <label>เป้าหมาย/ชั่วโมง<input id="step-target" type="number" min="0" step="any" required></label>
+    <label>เวลาติดตั้ง (นาที)<input id="step-setup" type="number" min="0" step="any" value="0"></label>
+    <div class="actions"><button type="submit" class="primary" id="step-submit" disabled>เพิ่ม Step</button><span class="muted" id="step-status"></span></div>
+  </form>
+</section>
+
+<section class="card" id="stock-card">
+  <div class="head"><h2>ยอดคงเหลือคลัง</h2><span class="muted" id="stock-count"></span></div>
+  <div class="scroll" id="stock-wrap"><p class="empty">กำลังโหลด…</p></div>
+</section>
+
+<section class="card" id="mo-card">
+  <div class="head"><h2>เปิดใบสั่งผลิต (Manufacturing Order)</h2></div>
+  <form id="mo-form" class="mrp-grid">
+    <label>สินค้าสำเร็จรูป (FG)<select id="mo-item"></select></label>
+    <label>จำนวนสั่งผลิต<input id="mo-qty" type="number" min="0.0001" step="any" required></label>
+    <label>BOM ที่ใช้<select id="mo-bom"></select></label>
+    <label>Routing ที่ใช้<select id="mo-routing"></select></label>
+    <label>กำหนดส่ง<input id="mo-due" type="date"></label>
+    <div class="actions"><button type="submit" class="primary" id="mo-submit" disabled>เปิดใบสั่งผลิต</button><span class="muted" id="mo-status"></span></div>
+  </form>
+  <div class="scroll" id="mo-list-wrap" style="margin-top:14px"><p class="empty">กำลังโหลด…</p></div>
+</section>
+
+<section class="card" id="shopfloor-card">
+  <div class="head"><h2>หน้างานผลิต</h2></div>
+  <label>ใบสั่งผลิต (ที่ปล่อยงานแล้ว/กำลังผลิต)<select id="shopfloor-mo"></select></label>
+  <div class="scroll" id="shopfloor-ops-wrap" style="margin-top:14px"><p class="empty">เลือกใบสั่งผลิตก่อน</p></div>
+</section>
+</div>
+</main>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="vendor/supabase.js"></script>
+<script src="theme.js"></script>
+<script type="module" src="production.js"></script>
+</body></html>
