@@ -1,0 +1,275 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>โครงสร้างสินค้า | MNP ERP</title>
+<script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('mnp-theme')||'light')}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="structure.css">
+</head><body>
+<svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 3H6v18h12V7Zm0 0 4 4h-4Z"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></symbol>
+  <symbol id="i-factory" viewBox="0 0 24 24"><path d="M3 21V3h4v10l7-4v4l7-4v12ZM7 17h1m4 0h1m4 0h1"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v1"/></symbol>
+  <symbol id="i-cog" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.2M12 18.8V21M21 12h-2.2M5.2 12H3m14.4-6.4-1.6 1.6M8.2 15.8l-1.6 1.6m11.8 0-1.6-1.6M8.2 8.2 6.6 6.6"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="12" r="4"/><path d="M12 12h9m-3 0v3.5m-2.5-3.5v2.5"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M15 12H3m0 0 4-4m-4 4 4 4m5-9V4h9v16h-9v-3"/></symbol>
+  <symbol id="i-tree" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="4" rx="1"/><rect x="3" y="17" width="6" height="4" rx="1"/><rect x="15" y="17" width="6" height="4" rx="1"/><path d="M12 7v6m0 0H6v4m6-4h6v4"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="8.5" cy="9.5" r="1.8"/><path d="m4 18 5.5-5 4 3.2L17 12l3 3.4"/></symbol>
+</defs></svg>
+<a class="skip-link" href="#content">ข้ามไปยังเนื้อหา</a>
+
+<p class="notice" id="auth-status" style="margin:16px">กำลังตรวจสถานะเข้าสู่ระบบ…</p>
+
+<section class="card" id="gate" style="max-width:460px;margin:16px auto 60px">
+  <h2>ต้องเข้าสู่ระบบก่อน</h2>
+  <p class="muted">หน้านี้อ่าน/เขียนฐานข้อมูลจริงและมี RLS คุ้มครอง ต้องเข้าสู่ระบบด้วยบัญชี Supabase Auth ก่อน — เข้าสู่ระบบครั้งเดียวใช้ได้ 24 ชั่วโมง</p>
+  <a class="primary" href="connect.html" style="display:inline-flex;align-items:center;min-height:38px;padding:7px 16px;border-radius:6px;text-decoration:none">ไปหน้าเข้าสู่ระบบ</a>
+</section>
+
+<section class="card" id="restricted" hidden style="max-width:460px;margin:16px auto 60px">
+  <h2>ยังไม่มีสิทธิ์ใช้งาน</h2>
+  <p class="muted">เข้าสู่ระบบสำเร็จ แต่บัญชีนี้ยังไม่ได้รับสิทธิ์ผู้ดูแลระบบ — โมดูลนี้เปิดให้เฉพาะผู้ดูแลก่อน</p>
+  <button type="button" id="logout-restricted">ออกจากระบบ</button>
+</section>
+
+<div id="workspace" hidden>
+<header class="app-masthead">
+  <div class="masthead-identity">
+    <button id="menu" aria-label="เปิดเมนู" aria-expanded="false" aria-controls="sidebar"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+    <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">M</span><span><b>MNP ERP <span class="brand-erp">/ โครงสร้างสินค้า</span></b><small>Item Master &amp; Product Structure</small></span></a>
+  </div>
+  <div class="masthead-actions">
+    <button type="button" class="theme-toggle" data-theme-toggle aria-label="สลับโหมดสี" title="สลับโหมดสี (Light/Dark)"><svg class="icon icon-sun" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><svg class="icon icon-moon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg></button>
+    <a href="production.html" class="masthead-link"><svg class="icon" aria-hidden="true"><use href="#i-factory"/></svg><span>Item / BOM / MO</span></a>
+  </div>
+</header>
+
+<div class="layout">
+  <aside id="sidebar" aria-label="เมนูหลัก">
+    <div class="side-head"><svg class="icon" aria-hidden="true"><use href="#i-cog"/></svg><span>System Parameter</span></div>
+    <nav id="nav" aria-label="เมนูโครงสร้าง">
+      <span class="nav-caption">โครงสร้าง</span>
+      <button type="button" data-mode="new"><svg class="icon" aria-hidden="true"><use href="#i-doc"/></svg><span>โครงสร้างสินค้า-ใหม่</span></button>
+      <button type="button" data-mode="edit" class="active" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-doc"/></svg><span>โครงสร้างสินค้า-แก้ไข</span></button>
+      <button type="button" data-mode="view"><svg class="icon" aria-hidden="true"><use href="#i-doc"/></svg><span>โครงสร้างสินค้า-ดู</span></button>
+      <button type="button" data-mode="inactive"><svg class="icon" aria-hidden="true"><use href="#i-doc"/></svg><span>โครงสร้างสินค้า-ไม่เก็บ</span></button>
+      <button type="button" data-mode="recode"><svg class="icon" aria-hidden="true"><use href="#i-doc"/></svg><span>โครงสร้างสินค้า-เปลี่ยนรหัส</span></button>
+      <button type="button" data-mode="reunit"><svg class="icon" aria-hidden="true"><use href="#i-doc"/></svg><span>โครงสร้างสินค้า-เปลี่ยนหน่วย</span></button>
+      <button type="button" data-mode="used"><svg class="icon" aria-hidden="true"><use href="#i-doc"/></svg><span>โครงสร้างสินค้า-มีการใช้งาน</span></button>
+      <span class="nav-caption">โมดูลอื่น</span>
+      <a class="nav-link" href="production.html"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg><span>สินค้า / BOM / ใบสั่งผลิต</span></a>
+      <a class="nav-link" href="mrp.html"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg><span>คำนวณวัตถุดิบ (MRP)</span></a>
+      <a class="nav-link" href="rb.html"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg><span>สูตรยาง (RB)</span></a>
+      <a class="nav-link" href="index.html"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg><span>ภาพรวม ERP</span></a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="side-foot">
+        <a href="connect.html"><svg class="icon" aria-hidden="true"><use href="#i-key"/></svg><span>Chg.Pass</span></a>
+        <button type="button" id="logout"><svg class="icon" aria-hidden="true"><use href="#i-out"/></svg><span>Logout</span></button>
+      </div>
+    </div>
+  </aside>
+  <button class="menu-backdrop" id="menu-backdrop" aria-label="ปิดเมนู" tabindex="-1" hidden></button>
+
+  <main>
+    <header>
+      <div class="breadcrumb"><span>โครงสร้าง</span><span aria-hidden="true">/</span><h1 id="mode-title">โครงสร้างสินค้า-แก้ไข</h1></div>
+      <div class="header-tools"><small id="session-chip"></small></div>
+    </header>
+
+    <section id="content" tabindex="-1">
+
+      <!-- ===== Group View : ค้นหาจากหมวดหมู่ คลาส-ไทป์-กรุ๊ป ===== -->
+      <section class="view-block">
+        <button type="button" class="view-bar" data-view-toggle aria-expanded="true" aria-controls="group-body">
+          <span>Group View</span><svg class="icon chev" aria-hidden="true"><use href="#i-menu"/></svg>
+        </button>
+        <div class="view-body" id="group-body">
+          <div class="gv-box">
+            <p class="gv-title">( <span id="gv-mode">แก้ไข</span> ) หมวดหมู่สินค้าหลัก</p>
+            <div class="gv-row">
+              <label class="gv-cat"><span>คลาส --ไทป์ --กรุ๊ป</span><select id="gv-category"></select></label>
+              <button type="button" id="gv-pick" class="primary">เลือก</button>
+            </div>
+            <div class="gv-row gv-row-find">
+              <select id="gv-field" aria-label="ค้นหาจากคอลัมน์">
+                <option value="code">Code</option>
+                <option value="code_secondary">ต่อท้ายรหัส</option>
+                <option value="name_en">ชื่ออังกฤษ</option>
+                <option value="name">ชื่อไทย</option>
+                <option value="description">รายละเอียด</option>
+              </select>
+              <input id="gv-keyword" aria-label="คำค้น" placeholder="พิมพ์คำค้นแล้วกด Enter">
+              <button type="button" id="gv-search">ค้นหา</button>
+            </div>
+            <p class="gv-found" id="gv-found">—</p>
+          </div>
+          <div class="scroll gv-results" id="gv-results"><p class="empty">กำลังโหลด…</p></div>
+        </div>
+      </section>
+
+      <!-- ===== List View : รายการสินค้าทั้งหมดในคลาสที่เลือก ===== -->
+      <section class="view-block">
+        <button type="button" class="view-bar" data-view-toggle aria-expanded="false" aria-controls="list-body">
+          <span>List View</span><svg class="icon chev" aria-hidden="true"><use href="#i-menu"/></svg>
+        </button>
+        <div class="view-body" id="list-body" hidden>
+          <div class="scroll" id="list-results"><p class="empty">กำลังโหลด…</p></div>
+        </div>
+      </section>
+
+      <!-- ===== Plan View : จุดที่สินค้านี้ถูกใช้ (where-used) ===== -->
+      <section class="view-block">
+        <button type="button" class="view-bar" data-view-toggle aria-expanded="false" aria-controls="plan-body">
+          <span>Plan View</span><svg class="icon chev" aria-hidden="true"><use href="#i-menu"/></svg>
+        </button>
+        <div class="view-body" id="plan-body" hidden>
+          <p class="muted small">แสดงว่าสินค้าที่เปิดอยู่ ถูกใช้เป็นชิ้นส่วนของสินค้าตัวใด (where-used) — เลือกสินค้าจาก Group View ก่อน</p>
+          <div class="scroll" id="plan-results"><p class="empty">ยังไม่ได้เลือกสินค้า</p></div>
+        </div>
+      </section>
+
+      <!-- ===== แท็บหลัก ===== -->
+      <section class="card tabs-card">
+        <div class="tabstrip" role="tablist" aria-label="มุมมองสินค้า">
+          <button type="button" role="tab" id="tab-general" aria-selected="true" aria-controls="panel-general"><svg class="icon" aria-hidden="true"><use href="#i-doc"/></svg><span>General</span></button>
+          <button type="button" role="tab" id="tab-structure" aria-selected="false" aria-controls="panel-structure"><svg class="icon" aria-hidden="true"><use href="#i-tree"/></svg><span>Structure</span></button>
+          <button type="button" role="tab" id="tab-main-image" aria-selected="false" aria-controls="panel-main-image"><svg class="icon" aria-hidden="true"><use href="#i-image"/></svg><span>Main Image</span></button>
+          <button type="button" role="tab" id="tab-image" aria-selected="false" aria-controls="panel-image"><svg class="icon" aria-hidden="true"><use href="#i-image"/></svg><span>Image</span></button>
+        </div>
+
+        <!-- ---------- General ---------- -->
+        <div role="tabpanel" id="panel-general" aria-labelledby="tab-general">
+          <form id="item-form" class="gen-grid">
+            <div class="gen-col">
+              <fieldset class="lg-set note-set">
+                <legend>หมายเหตุ+</legend>
+                <ol class="note-list">
+                  <li>ห้ามใช้ทุกสัญลักษณ์นำหน้า "ชื่อ" และ "รหัส"</li>
+                  <li>ห้ามใช้สัญลักษณ์ # ในการตั้ง "ชื่อ" และ "รหัส"</li>
+                  <li>ห้ามใช้สัญลักษณ์ ' (single quote) ในโปรแกรม</li>
+                </ol>
+              </fieldset>
+
+              <fieldset class="lg-set">
+                <legend>ส่วนหลัก</legend>
+                <label class="lg-field"><span class="req">ชื่ออังกฤษ :</span><input id="f-name-en" maxlength="120" required></label>
+                <label class="lg-field"><span class="req">ชื่อไทย :</span><input id="f-name" maxlength="120" required></label>
+                <div class="lg-field lg-split"><span class="req">รหัส :</span>
+                  <input id="f-code" maxlength="40" required>
+                  <span class="mini-label">เสริม :</span><input id="f-code2" maxlength="40">
+                </div>
+                <label class="lg-field"><span>บาร์โค้ด :</span><input id="f-barcode" maxlength="64"></label>
+                <div class="lg-field"><span class="req">หน่วย</span>
+                  <span class="pair"><select id="f-uom"></select><input id="f-uom-qty" type="number" step="any" value="1.0000" readonly></span>
+                </div>
+                <div class="lg-field"><span class="req">หน่วยย่อย</span>
+                  <span class="pair"><select id="f-uom2"></select><input id="f-uom2-qty" type="number" step="any" value="1.0000"></span>
+                </div>
+              </fieldset>
+
+              <fieldset class="lg-set">
+                <legend>หมวดหมู่</legend>
+                <label class="lg-field"><span class="req">ประเภท</span><select id="f-type">
+                  <option value="FG">FG — สินค้าสำเร็จรูป</option>
+                  <option value="WIP">WIP — งานระหว่างทำ</option>
+                  <option value="RM">RM — วัตถุดิบ / StandardPart</option>
+                  <option value="SERVICE">SERVICE — Process</option>
+                </select></label>
+                <label class="lg-field"><span class="req">คลาส :</span><input id="f-class" maxlength="40" required></label>
+                <label class="lg-field"><span>ไทป์</span><input id="f-subtype" maxlength="40" placeholder="สินค้า / วัตถุดิบ"></label>
+                <label class="lg-field"><span>กรุ๊ป</span><input id="f-group" maxlength="40"></label>
+              </fieldset>
+            </div>
+
+            <div class="gen-col">
+              <fieldset class="lg-set detail-set">
+                <legend>รายละเอียด</legend>
+                <label class="lg-field lg-wide"><span>รายละเอียด</span><textarea id="f-description" rows="4" maxlength="2000"></textarea></label>
+                <label class="lg-field lg-wide"><span>รูปทรง</span><input id="f-shape" maxlength="60"></label>
+                <div class="lg-two">
+                  <label class="lg-field"><span>ยาว</span><span class="pair"><input id="f-len" type="number" step="any" value="0.000"><select id="f-len-uom" class="uom-sel"></select></span></label>
+                  <label class="lg-field"><span>กว้าง</span><span class="pair"><input id="f-wid" type="number" step="any" value="0.000"><select id="f-wid-uom" class="uom-sel"></select></span></label>
+                  <label class="lg-field"><span>หนา</span><span class="pair"><input id="f-thk" type="number" step="any" value="0.000"><select id="f-thk-uom" class="uom-sel"></select></span></label>
+                  <label class="lg-field"><span>สูง</span><span class="pair"><input id="f-hgt" type="number" step="any" value="0.000"><select id="f-hgt-uom" class="uom-sel"></select></span></label>
+                  <label class="lg-field"><span>ปริมาตร</span><span class="pair"><input id="f-vol" type="number" step="any" value="0.000"><select id="f-vol-uom"><option value="M3">ลบ.ม.</option><option value="CM3">ลบ.ซม.</option><option value="L">ลิตร</option></select></span></label>
+                  <label class="lg-field"><span class="dim">เวลา(Process)</span><span class="pair"><input id="f-process" type="number" step="any" value="0.0000" readonly><em class="unit-note">นาที/ชิ้น</em></span></label>
+                  <label class="lg-field"><span>ขนาด</span><span class="pair"><input id="f-size" type="number" step="any" value="0.000"><select id="f-size-uom" class="uom-sel"></select></span></label>
+                  <label class="lg-field"><span>ต่ำสุด(นน.)</span><input id="f-wmin" type="number" step="any" value="0.00"></label>
+                  <label class="lg-field"><span>น้ำหนัก/ชิ้น</span><span class="pair"><input id="f-wpp" type="number" step="any" value="0.000"><select id="f-wpp-uom"><option value="KG">KG</option><option value="GR">GR</option><option value="Ct">Ct</option></select></span></label>
+                  <label class="lg-field"><span>สูงสุด(นน.)</span><input id="f-wmax" type="number" step="any" value="0.00"></label>
+                  <label class="lg-field"><span>จำนวนสูญเสีย</span><input id="f-scrap" type="number" step="any" value="0.00"></label>
+                </div>
+                <hr class="dash">
+                <div class="lg-two">
+                  <label class="lg-field"><span>วันที่เริ่ม</span><input id="f-from" type="date"></label>
+                  <label class="lg-field used"><span>Used</span><input id="f-used" value="0.0" readonly></label>
+                  <label class="lg-field"><span>ถึง</span><input id="f-to" type="date"></label>
+                  <label class="lg-field used"><span>Revision</span><input id="f-revision" value="0" readonly></label>
+                </div>
+              </fieldset>
+            </div>
+
+            <div class="gen-actions">
+              <button type="button" id="btn-save-edit" disabled>แก้ไข</button>
+              <button type="button" id="btn-save-new" disabled>บันทึกข้อมูลใหม่</button>
+              <button type="button" id="btn-defaults" class="primary">ตั้งค่าเริ่มต้น</button>
+              <span class="muted" id="form-status"></span>
+            </div>
+          </form>
+        </div>
+
+        <!-- ---------- Structure ---------- -->
+        <div role="tabpanel" id="panel-structure" aria-labelledby="tab-structure" hidden>
+          <div class="scroll st-scroll" id="st-tree"><p class="empty">เลือกสินค้าจาก Group View ก่อน</p></div>
+          <p class="st-legend">หมายเหตุ : <b class="t-process">*แดง = Process</b> , <b class="t-wip">*น้ำเงิน = WIP</b> , <b class="t-part">*ฟ้า = StandardPart</b> — คลิกขวาที่แถวเพื่อ เพิ่ม/แก้ไข/ตัด/วาง/ลบ</p>
+          <div class="st-new">
+            <button type="button" id="st-copy">คัดลอก..</button>
+            <label class="lg-field"><span class="req">ชื่ออังกฤษ :</span><input id="st-name-en" maxlength="120"></label>
+            <label class="lg-field"><span class="req">ชื่อไทย :</span><input id="st-name" maxlength="120"></label>
+            <label class="lg-field"><span class="req">รหัส</span><input id="st-code" maxlength="40"></label>
+            <label class="lg-field"><span>เสริม :</span><input id="st-code2" maxlength="40"></label>
+            <label class="lg-field"><span>ประเภท</span><select id="st-type">
+              <option value="RM">RM</option><option value="WIP">WIP</option><option value="SERVICE">SERVICE</option><option value="FG">FG</option>
+            </select></label>
+            <label class="lg-field"><span>หน่วย</span><select id="st-uom"></select></label>
+            <button type="button" class="primary" id="st-add" disabled>เพิ่มเข้าโครงสร้าง</button>
+            <span class="muted" id="st-status">คลิกแถวในโครงสร้างเพื่อเลือกจุดที่จะเพิ่ม</span>
+          </div>
+        </div>
+
+        <!-- ---------- Main Image / Image ---------- -->
+        <div role="tabpanel" id="panel-main-image" aria-labelledby="tab-main-image" hidden>
+          <div class="img-slot"><svg class="icon" aria-hidden="true"><use href="#i-image"/></svg>
+            <p>รูปหลักของสินค้า</p>
+            <p class="muted small">ยังไม่ได้ต่อ Supabase Storage — ช่องนี้เตรียมไว้สำหรับรูปหลัก 1 รูปต่อสินค้า</p>
+          </div>
+        </div>
+        <div role="tabpanel" id="panel-image" aria-labelledby="tab-image" hidden>
+          <div class="img-slot"><svg class="icon" aria-hidden="true"><use href="#i-image"/></svg>
+            <p>รูปประกอบเพิ่มเติม</p>
+            <p class="muted small">ยังไม่ได้ต่อ Supabase Storage — ช่องนี้เตรียมไว้สำหรับรูปหลายรูปต่อสินค้า</p>
+          </div>
+        </div>
+      </section>
+
+    </section>
+    <p class="sim workspace-notice"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span>MNP ERP — โมดูลโครงสร้างสินค้า (ผังหน้าจออ้างอิงระบบเดิม ปรับมาใช้ธีมและฐานข้อมูลของเรา)</span></p>
+  </main>
+</div>
+</div>
+
+<dialog id="line-dialog"><form method="dialog" id="line-form">
+  <div class="head"><div><h2 id="line-title">เพิ่มโครงสร้างย่อย</h2><p class="muted" id="line-note"></p></div><button value="cancel" type="submit" formnovalidate>✕</button></div>
+  <label>สินค้า/ชิ้นส่วน<select id="line-component" required></select></label>
+  <label>จำนวนต่อหน่วย<input id="line-qty" type="number" min="0" step="any" required></label>
+  <label>สูญเสีย (%)<input id="line-scrap" type="number" min="0" max="100" step="any" value="0"></label>
+  <label>แผนกที่ใช้<select id="line-dept"></select></label>
+  <button value="ok" type="submit" class="primary wide">บันทึก</button>
+</form></dialog>
+<ul id="ctx-menu" class="ctx-menu" hidden></ul>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="vendor/supabase.js"></script>
+<script src="theme.js"></script>
+<script type="module" src="structure.js"></script>
+</body></html>

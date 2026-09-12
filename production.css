@@ -31,30 +31,3 @@
 .line-row select,.line-row input{font-size:12.5px;color:var(--text);padding:5px 7px;min-height:28px;min-width:0}
 .line-row .row-remove{font-size:11px;padding:5px 9px}
 @media(max-width:560px){.line-row,.line-row.routing-row{grid-template-columns:1fr}}
-
-/* Product structure — Class/Type/Group search + right-click BOM tree */
-.structure-search-bar{display:grid;grid-template-columns:1fr 1fr 1fr 2fr auto;gap:8px;align-items:end;margin:10px 0}
-.structure-search-bar label{display:grid;gap:3px;margin:0;font-size:12px;font-weight:600;color:var(--muted)}
-.structure-search-bar label.wide{grid-column:auto}
-.structure-search-bar .actions{margin:0}
-@media(max-width:900px){.structure-search-bar{grid-template-columns:1fr 1fr}.structure-search-bar label.wide{grid-column:1 / -1}.structure-search-bar .actions{grid-column:1 / -1;justify-content:flex-start}}
-
-#structure-search-wrap table tbody tr{cursor:pointer}
-#structure-search-wrap table tbody tr:hover{background:#f5f8fc}
-#structure-search-wrap table tbody tr.selected{background:#e7f1ff}
-
-.tree-row{display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:5px;font-size:12.5px}
-.tree-row:hover{background:#f5f8fc}
-.tree-row.cut{opacity:.55;outline:1px dashed #c92a2a;outline-offset:-1px}
-.tree-row .tree-toggle{width:14px;flex:0 0 14px;text-align:center;color:var(--muted);cursor:pointer;user-select:none}
-.tree-row .tree-code{flex:0 0 auto;min-width:150px;font-weight:700;color:var(--text)}
-.tree-row .tree-name{flex:1 1 auto;color:var(--text)}
-.tree-row .tree-qty{flex:0 0 auto;min-width:170px;color:var(--muted);text-align:right}
-.tree-children{margin-left:19px;padding-left:8px;border-left:1px dashed var(--line)}
-
-.ctx-menu{position:fixed;z-index:40;min-width:180px;margin:0;padding:5px;list-style:none;border:1px solid var(--line);border-radius:8px;background:#fff;box-shadow:0 10px 30px #13293d33;font-size:12.5px}
-.ctx-menu li{padding:8px 10px;border-radius:5px;cursor:pointer;color:var(--text)}
-.ctx-menu li:hover{background:#f0f4f9}
-.ctx-menu li[aria-disabled="true"]{color:#adb5bd;cursor:not-allowed}
-.ctx-menu li[aria-disabled="true"]:hover{background:none}
-.ctx-menu li.danger{color:#c92a2a}

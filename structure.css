@@ -1,0 +1,120 @@
+/* โครงสร้างสินค้า — ผังหน้าจอตามระบบเดิม (Group/List/Plan View + แท็บ
+   General/Structure/Image และตารางโครงสร้างแบบ tree) แต่เรนเดอร์ด้วยโทเคนธีม
+   ของเราเอง (theme.css) ทั้งโหมดสว่างและมืด ไม่ได้คัดลอกสี/แบรนด์ของระบบเดิม */
+
+:root{--st-sub:#f1f5fa;--st-stripe:#f8fafd;--st-tint:#edf4ff;--st-warn:#fff7e8;--st-warn-line:#f3ddb4;--st-danger:#bd3b48}
+:root[data-theme="dark"]{--st-sub:#16233a;--st-stripe:#131f33;--st-tint:#17243c;--st-warn:#241d0f;--st-warn-line:#4a3a19;--st-danger:#f08c98}
+
+/* ---- sidebar extras ------------------------------------------------------ */
+.side-head{display:flex;align-items:center;gap:9px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);font-size:.8125rem;font-weight:600}
+.side-head .icon{width:17px;height:17px;flex-basis:17px;color:var(--accent)}
+.side-foot{display:flex;gap:8px}
+.side-foot a,.side-foot button{display:inline-flex;align-items:center;justify-content:center;gap:7px;flex:1;min-height:38px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text);font-size:.8125rem;text-decoration:none}
+.side-foot .icon{width:16px;height:16px;flex-basis:16px}
+
+/* ---- Group / List / Plan View bars --------------------------------------- */
+.view-block{margin-bottom:12px}
+.view-bar{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:9px 14px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text);font-size:.875rem;font-weight:600;text-align:left}
+.view-bar[aria-expanded="true"]{border-bottom-left-radius:0;border-bottom-right-radius:0;border-bottom-color:transparent}
+.view-bar .chev{width:16px;height:16px;flex-basis:16px;margin-left:auto;color:var(--muted);transition:transform .15s}
+.view-bar[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.view-body{padding:14px;border:1px solid var(--line);border-top:0;border-radius:0 0 9px 9px;background:var(--surface)}
+
+.gv-box{display:grid;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:9px;background:var(--st-sub)}
+.gv-title{margin:0;font-size:.8125rem;font-weight:600;color:var(--accent)}
+.gv-row{display:flex;flex-wrap:wrap;align-items:end;gap:8px}
+.gv-cat{display:grid;gap:4px;flex:1 1 420px;font-size:.75rem;font-weight:600;color:var(--muted)}
+.gv-row-find>select{flex:0 0 150px}
+.gv-row-find>input{flex:1 1 260px}
+.gv-row button{min-height:36px;white-space:nowrap}
+.gv-found{margin:0;color:var(--st-danger);font-size:.8125rem;font-weight:600}
+.gv-results,#list-results,#plan-results{margin-top:12px;max-height:330px}
+.gv-results table tbody tr,#list-results table tbody tr{cursor:pointer}
+.gv-results tbody tr.on,#list-results tbody tr.on{background:var(--st-tint)}
+tr.filter-row th{padding:4px 8px;background:var(--surface)}
+tr.filter-row input{width:100%;min-height:28px;padding:3px 7px;font-size:.75rem}
+
+/* ---- tab strip ----------------------------------------------------------- */
+.tabs-card{padding:0;overflow:hidden}
+.tabstrip{display:flex;flex-wrap:wrap;gap:2px;padding:8px 8px 0;border-bottom:1px solid var(--line);background:var(--st-sub)}
+.tabstrip button{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:7px 16px;border:1px solid transparent;border-bottom:0;border-radius:8px 8px 0 0;background:transparent;color:var(--muted);font-size:.8125rem;font-weight:500}
+.tabstrip button .icon{width:15px;height:15px;flex-basis:15px}
+.tabstrip button[aria-selected="true"]{border-color:var(--line);background:var(--surface);color:var(--accent);font-weight:600;margin-bottom:-1px}
+[role="tabpanel"]{padding:18px}
+
+/* ---- General tab: legacy field layout ------------------------------------ */
+.gen-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px;align-items:start}
+.gen-col{display:grid;gap:14px;align-content:start;min-width:0}
+.lg-set{margin:0;padding:14px 14px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.lg-set legend{padding:3px 12px;border:1px solid var(--line);border-radius:20px;background:var(--st-tint);color:var(--accent);font-size:.75rem;font-weight:600}
+.note-set{background:var(--st-warn);border-color:var(--st-warn-line)}
+.note-set legend{background:var(--st-warn);border-color:var(--st-warn-line);color:#946315}
+.note-list{margin:0;padding-left:20px;color:var(--st-danger);font-size:.75rem;line-height:1.9}
+
+.lg-field{display:grid;grid-template-columns:104px minmax(0,1fr);align-items:center;gap:8px;margin:6px 0;font-size:.8125rem;font-weight:500;color:var(--muted)}
+.lg-field>input,.lg-field>textarea,.lg-field>select{min-height:32px;padding:5px 9px;font-size:.8125rem}
+.lg-field textarea{resize:vertical}
+.lg-field .req::after{content:" *";color:var(--st-danger)}
+.lg-field .dim{color:#94a3b8}
+.lg-split{grid-template-columns:104px minmax(0,1fr) auto minmax(0,110px)}
+.lg-split .mini-label{font-size:.75rem;white-space:nowrap}
+.lg-wide{grid-template-columns:104px minmax(0,1fr)}
+.lg-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 14px}
+.lg-two .lg-field{grid-template-columns:86px minmax(0,1fr)}
+.lg-two .pair{grid-template-columns:minmax(0,1fr) 72px}
+.pair{display:grid;grid-template-columns:minmax(0,1fr) 88px;gap:5px}
+.pair>input,.pair>select{min-height:32px;padding:5px 8px;font-size:.8125rem;min-width:0}
+.unit-note{align-self:center;color:var(--st-danger);font-size:.75rem;font-style:normal}
+.used input{background:var(--st-sub);font-weight:600}
+.used>span{color:var(--st-danger);font-weight:600}
+.dash{margin:12px 0;border:0;border-top:1px dashed var(--st-danger)}
+input[readonly],select:disabled,input:disabled{opacity:.75;cursor:not-allowed}
+
+.gen-actions{grid-column:1 / -1;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding-top:4px;border-top:1px solid var(--line);margin-top:2px}
+.gen-actions button{min-height:36px;font-size:.8125rem}
+.gen-actions .muted{margin-left:6px;font-size:.75rem}
+
+/* ---- Structure tab: tree table ------------------------------------------- */
+.st-scroll{max-height:440px;border:1px solid var(--line)}
+#st-tree table{min-width:1080px}
+#st-tree th{position:sticky;top:0;z-index:1;background:var(--st-sub);border-bottom:1px solid var(--line);font-size:.75rem}
+#st-tree th.num,#st-tree td.num{text-align:right;white-space:nowrap}
+#st-tree td{padding:7px 10px;border-bottom:1px solid var(--line);font-size:.8125rem;white-space:nowrap}
+#st-tree tbody tr:nth-child(even){background:var(--st-stripe)}
+#st-tree tbody tr.on{background:var(--st-tint)}
+#st-tree tbody tr.cut td{opacity:.5}
+#st-tree tbody tr.cut td:first-child{box-shadow:inset 2px 0 0 var(--st-danger)}
+.tw{display:inline-block}
+.tg{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;margin-right:5px;border:1px solid var(--line);border-radius:4px;background:var(--surface);color:var(--muted);font-size:13px;font-weight:600;line-height:14px;cursor:pointer;vertical-align:middle}
+.tg.leaf{border-color:transparent;background:none;cursor:default}
+.tdot{display:inline-block;width:7px;height:7px;margin-right:7px;border-radius:50%;background:currentColor;vertical-align:middle}
+/* theme.css ตั้ง .scroll td{color:#334155} ไว้ ซึ่งจำเพาะกว่า .t-* เดี่ยว ๆ
+   จึงต้องระบุคู่กับ td ด้วย ไม่งั้นสีตามชนิดชิ้นส่วนจะไม่ขึ้น */
+.t-process,.st-scroll td.t-process{color:var(--st-danger)}
+.t-wip,.st-scroll td.t-wip{color:#245da8;font-weight:600}
+.t-part,.st-scroll td.t-part{color:#3b9ad9}
+.t-fg,.st-scroll td.t-fg{color:var(--text)}
+:root[data-theme="dark"] .t-wip,:root[data-theme="dark"] .st-scroll td.t-wip{color:#7fb0f5}
+:root[data-theme="dark"] .t-part,:root[data-theme="dark"] .st-scroll td.t-part{color:#63c0ea}
+.st-legend{margin:10px 0 14px;font-size:.75rem;color:var(--muted)}
+.st-legend b{font-weight:600;margin-right:4px}
+.st-new{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--st-sub)}
+.st-new .lg-field{flex:1 1 240px;margin:0;grid-template-columns:84px minmax(0,1fr)}
+.st-new button{min-height:36px;font-size:.8125rem;white-space:nowrap}
+.st-new .muted{flex-basis:100%;font-size:.75rem}
+
+.img-slot{display:grid;justify-items:center;gap:6px;padding:44px 16px;border:1px dashed var(--line);border-radius:10px;background:var(--st-sub);text-align:center}
+.img-slot .icon{width:32px;height:32px;color:var(--muted)}
+.img-slot p{margin:0;font-size:.875rem}
+
+/* ---- right-click menu ---------------------------------------------------- */
+.ctx-menu{position:fixed;z-index:60;min-width:190px;margin:0;padding:5px;list-style:none;border:1px solid var(--line);border-radius:9px;background:var(--surface);box-shadow:0 12px 34px #13293d33;font-size:.8125rem}
+.ctx-menu li{padding:8px 10px;border-radius:6px;cursor:pointer;color:var(--text)}
+.ctx-menu li:hover{background:var(--st-sub)}
+.ctx-menu li[aria-disabled="true"]{color:#94a3b8;cursor:not-allowed}
+.ctx-menu li[aria-disabled="true"]:hover{background:none}
+.ctx-menu li.danger{color:var(--st-danger)}
+
+.small{font-size:.75rem}
+@media(max-width:1180px){.gen-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:760px){.lg-two{grid-template-columns:minmax(0,1fr)}.lg-split{grid-template-columns:104px minmax(0,1fr)}.lg-split .mini-label{display:none}.lg-field{grid-template-columns:92px minmax(0,1fr)}}
