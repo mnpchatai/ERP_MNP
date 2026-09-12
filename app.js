@@ -1,3 +1,7 @@
+import {createAppClient, authError} from './supabase-client.mjs';
+import {enforceSessionTtl, watchLoginMarks, isAdmin} from './auth-gate.mjs';
+
+function startSimulation(){
 const KEY="mnp-erp-demo-v1";
 const seed={items:[{id:"FG-1001",name:"โต๊ะประกอบ MNP-A",type:"FG",unit:"ตัว",stock:8},{id:"RM-STEEL",name:"เหล็กกล่อง 25 mm",type:"RM",unit:"เมตร",stock:420},{id:"RM-TOP",name:"แผ่นท็อปโต๊ะ",type:"RM",unit:"แผ่น",stock:64},{id:"RM-SCREW",name:"ชุดสกรู M6",type:"RM",unit:"ชุด",stock:180},{id:"RM-PAINT",name:"สีฝุ่นดำ",type:"RM",unit:"kg",stock:24}],departments:[{code:"RB",name:"ขึ้นรูปยาง (RB)"},{code:"CT",name:"ตัดและเจาะ"},{code:"WD",name:"เชื่อม"},{code:"PT",name:"พ่นสี"},{code:"AS",name:"ประกอบและ QC"}],boms:{"FG-1001":{version:"BOM-03",lines:[{itemId:"RM-STEEL",qty:4.2,scrap:.03,dept:"CT"},{itemId:"RM-TOP",qty:1,scrap:0,dept:"CT"},{itemId:"RM-SCREW",qty:1,scrap:.02,dept:"AS"},{itemId:"RM-PAINT",qty:.18,scrap:.05,dept:"PT"}]}},routing:{"FG-1001":[{seq:10,dept:"ตัดและเจาะ",target:12,setup:30},{seq:20,dept:"เชื่อม",target:8,setup:20},{seq:30,dept:"พ่นสี",target:15,setup:45},{seq:40,dept:"ประกอบและ QC",target:10,setup:15}]},orders:[{id:"SO-2609001",customer:"บริษัท สยามอุตสาหกรรม จำกัด",itemId:"FG-1001",qty:40,due:"2026-09-15",status:"CONFIRMED"},{id:"SO-2609002",customer:"MNP Demo Customer",itemId:"FG-1001",qty:24,due:"2026-09-18",status:"DRAFT"}],productions:[],events:[]};
 const $=s=>document.querySelector(s),clone=x=>JSON.parse(JSON.stringify(x)),num=x=>new Intl.NumberFormat("th-TH",{maximumFractionDigits:2}).format(x),esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));let db=load(),view="dashboard",bomItem=null,bomDept="ALL";
@@ -86,3 +90,48 @@ $("#menu-backdrop").onclick=()=>{setMenu(false);$("#menu").focus()};
 document.addEventListener("keydown",e=>{if(!document.body.classList.contains("open"))return;if(e.key==="Escape"){setMenu(false);$("#menu").focus()}if(e.key==="Tab"){const links=[...document.querySelectorAll("#sidebar a,#sidebar button")];const first=links[0],last=links.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
 window.matchMedia("(min-width:851px)").addEventListener("change",()=>setMenu(false));
 $("#reset").onclick=()=>{if(confirm("คืนค่าข้อมูลจำลองทั้งหมด?")){db=clone(seed);save();view="dashboard";render()}};$("#date").textContent=new Intl.DateTimeFormat("th-TH",{dateStyle:"full"}).format(new Date());render();
+}
+
+// ---- auth gate ------------------------------------------------------------
+const q = s => document.querySelector(s);
+const client = createAppClient();
+let started = false;
+
+async function evaluateAccess(user) {
+  const submit = q('#login-submit');
+  if (submit) submit.disabled = false;
+  if (!user) {
+    q('#gate').hidden = false; q('#restricted').hidden = true; q('#workspace').hidden = true;
+    q('#auth-status').textContent = 'ยังไม่ได้เข้าสู่ระบบ';
+    return;
+  }
+  const admin = await isAdmin(client);
+  q('#gate').hidden = true;
+  q('#restricted').hidden = admin;
+  q('#workspace').hidden = !admin;
+  q('#auth-status').textContent = `เข้าสู่ระบบแล้ว: ${user.email}`;
+  if (admin && !started) { started = true; startSimulation(); }
+}
+
+q('#login-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const button = q('#login-submit');
+  button.disabled = true; q('#auth-status').textContent = 'กำลังเข้าสู่ระบบ…';
+  try {
+    const {error} = await client.auth.signInWithPassword({
+      email: q('#login-email').value.trim(), password: q('#login-password').value
+    });
+    if (error) throw error;
+  } catch (error) { q('#auth-status').textContent = authError(error); button.disabled = false; }
+  finally { q('#login-password').value = ''; }
+});
+
+q('#logout-restricted').addEventListener('click', () => client.auth.signOut());
+
+watchLoginMarks(client);
+client.auth.onAuthStateChange((_event, session) => evaluateAccess(session?.user ?? null));
+(async () => {
+  await enforceSessionTtl(client);
+  const {data} = await client.auth.getUser();
+  await evaluateAccess(data?.user ?? null);
+})();

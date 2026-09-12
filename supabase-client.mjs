@@ -1,11 +1,14 @@
 import {config} from './public-config.js';
-// One client per page. Session survives same-tab navigation, not browser restart.
-// Pages that sign in with a magic link must opt into detectSessionInUrl, because
-// the link comes back carrying the session in the URL fragment.
+// One client per page, shared across pages via localStorage under the same
+// key -- signing in on one page carries over when navigating to another
+// (and across new tabs/a browser restart), for as long as auth-gate.mjs's
+// 24h login mark stays fresh. Pages that sign in with a magic link must opt
+// into detectSessionInUrl, because the link comes back carrying the session
+// in the URL fragment.
 export function createAppClient({detectSessionInUrl = false} = {}) {
   if (!globalThis.supabase?.createClient) throw Error('โหลด Supabase SDK ไม่สำเร็จ กรุณาโหลดหน้าใหม่');
   return globalThis.supabase.createClient(config.url, config.key, {
-    auth: {persistSession:true, storage:sessionStorage, storageKey:'mnp-erp-auth-v1',
+    auth: {persistSession:true, storage:localStorage, storageKey:'mnp-erp-auth-v1',
       autoRefreshToken:true, detectSessionInUrl}
   });
 }

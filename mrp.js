@@ -8,6 +8,8 @@
 // DATA is read-only; BOMSHEET is working state and lives in this browser only.
 import {COLUMNS, FIELDS, listItems, listDepartments, listCustomers, listPackages,
         listColorSets, filterByItem, countRows, dataError} from './mrp-data.mjs';
+import {createAppClient, authError} from './supabase-client.mjs';
+import {enforceSessionTtl, watchLoginMarks, isAdmin} from './auth-gate.mjs';
 
 const $ = s => document.querySelector(s);
 const KEY = 'mnp-mrp-bomsheet-v1';
@@ -303,4 +305,47 @@ $('#bom-export').onclick = () => {
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 };
 
-boot();
+// ---- auth gate ------------------------------------------------------------
+// DATA reads (mrp-data.mjs) stay anon-readable at the RLS level -- this gate
+// only decides whether the *page* runs boot() and shows its content, per the
+// app-wide "must log in, admin-only for now" policy in docs/DATA-LAYER.md.
+const client = createAppClient();
+let started = false;
+
+async function evaluateAccess(user) {
+  $('#login-submit') && ($('#login-submit').disabled = false);
+  if (!user) {
+    $('#gate').hidden = false; $('#restricted').hidden = true; $('#workspace').hidden = true;
+    $('#auth-status').textContent = 'ยังไม่ได้เข้าสู่ระบบ';
+    return;
+  }
+  const admin = await isAdmin(client);
+  $('#gate').hidden = true;
+  $('#restricted').hidden = admin;
+  $('#workspace').hidden = !admin;
+  $('#auth-status').textContent = `เข้าสู่ระบบแล้ว: ${user.email}`;
+  if (admin && !started) { started = true; boot(); }
+}
+
+$('#login-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const button = $('#login-submit');
+  button.disabled = true; $('#auth-status').textContent = 'กำลังเข้าสู่ระบบ…';
+  try {
+    const {error} = await client.auth.signInWithPassword({
+      email: $('#login-email').value.trim(), password: $('#login-password').value
+    });
+    if (error) throw error;
+  } catch (error) { $('#auth-status').textContent = authError(error); button.disabled = false; }
+  finally { $('#login-password').value = ''; }
+});
+
+$('#logout-restricted').addEventListener('click', () => client.auth.signOut());
+
+watchLoginMarks(client);
+client.auth.onAuthStateChange((_event, session) => evaluateAccess(session?.user ?? null));
+(async () => {
+  await enforceSessionTtl(client);
+  const {data} = await client.auth.getUser();
+  await evaluateAccess(data?.user ?? null);
+})();

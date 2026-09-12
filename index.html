@@ -30,6 +30,26 @@
   <symbol id="i-connect" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v7c0 4 16 4 16 0V5M4 12v7c0 4 16 4 16 0v-7"/></symbol>
 </defs></svg>
 <a class="skip-link" href="#content">ข้ามไปยังเนื้อหา</a>
+
+<p class="notice" id="auth-status" style="margin:16px">กำลังตรวจสถานะเข้าสู่ระบบ…</p>
+
+<section class="card" id="gate" style="max-width:420px;margin:16px auto 60px">
+  <h2>เข้าสู่ระบบ</h2>
+  <p class="muted">ต้องเข้าสู่ระบบด้วยบัญชี Supabase Auth ก่อนใช้งาน — เข้าสู่ระบบครั้งเดียวใช้ได้ 24 ชั่วโมง</p>
+  <form id="login-form">
+    <label>อีเมล<input id="login-email" type="email" autocomplete="username" required></label>
+    <label>รหัสผ่าน<input id="login-password" type="password" autocomplete="current-password" required></label>
+    <button type="submit" class="primary" id="login-submit">เข้าสู่ระบบ</button>
+  </form>
+</section>
+
+<section class="card" id="restricted" hidden style="max-width:420px;margin:16px auto 60px">
+  <h2>ยังไม่มีสิทธิ์ใช้งาน</h2>
+  <p class="muted">เข้าสู่ระบบสำเร็จ แต่บัญชีนี้ยังไม่ได้รับสิทธิ์ผู้ดูแลระบบ — โมดูลนี้เปิดให้เฉพาะผู้ดูแลก่อน รอกำหนดสิทธิ์เพิ่มเติมภายหลัง</p>
+  <button type="button" id="logout-restricted">ออกจากระบบ</button>
+</section>
+
+<div id="workspace" hidden>
 <header class="app-masthead">
   <div class="masthead-identity">
     <button id="menu" aria-label="เปิดเมนู" aria-expanded="false" aria-controls="sidebar"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
@@ -66,9 +86,11 @@
     <p class="sim workspace-notice"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span>รุ่นทดลอง — ยังไม่เปิดบันทึกฐานข้อมูลจริงหรือรับรองความตรงกับ Excel ทั้งระบบ</span></p>
   </main>
 </div>
+</div>
 <dialog id="modal" aria-label="รายละเอียดและแบบฟอร์ม"><form method="dialog" id="modal-content"></form></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
+<script src="vendor/supabase.js"></script>
 <script src="theme.js"></script>
-<script src="app.js"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 import {config} from './public-config.js';
 import {createAppClient,cloudError,authError} from './supabase-client.mjs';
+import {enforceSessionTtl,watchLoginMarks} from './auth-gate.mjs';
 const $ = s => document.querySelector(s);
 let client;
 function signedIn(user) {
@@ -18,7 +19,9 @@ try {
   $('#connection').textContent = 'เชื่อมบริการ Auth สำเร็จ — ยังไม่ได้ยืนยันสิทธิ์อ่าน/เขียนฐานข้อมูล';
   $('#signin').disabled = false;
   signedIn(null);
+  watchLoginMarks(client);
   client.auth.onAuthStateChange((_event,session)=>signedIn(session?.user));
+  await enforceSessionTtl(client);
   const {data} = await client.auth.getUser();
   signedIn(data?.user);
 } catch(error) { $('#connection').textContent = `เชื่อมต่อไม่สำเร็จ: ${error.message}`; }

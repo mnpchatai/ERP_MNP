@@ -2,6 +2,7 @@ import {calculate} from './rb-calc.mjs';
 import {mountCatalog} from './rb-catalog.mjs';
 import {createAppClient,cloudError,authError} from './supabase-client.mjs';
 import {saveCloudPlan,listCloudPlans,validateSnapshot} from './rb-cloud.mjs';
+import {enforceSessionTtl,watchLoginMarks,isAdmin} from './auth-gate.mjs';
 const $=s=>document.querySelector(s),key='mnp-rb-pilot-v1';
 const fields=['quantity','stock','perFg','yield','weight','setup','joint','scrap','batch','increment'];
 const products=[{id:'DEMO-RB-001',name:'ชิ้นส่วนยางตัวอย่าง A',formula:'DEMO-COMPOUND-A',perFg:2,yield:10,weight:100},{id:'DEMO-RB-002',name:'ชิ้นส่วนยางตัวอย่าง B',formula:'DEMO-COMPOUND-B',perFg:1,yield:5,weight:250}];
@@ -85,10 +86,12 @@ async function loadCloud(){
 $('#refresh-cloud').onclick=()=>loadCloud();
 $('#previous').onclick=()=>{if(page>0){page--;loadCloud();}};
 $('#next').onclick=()=>{page++;loadCloud();};
-function setUser(next){
+async function setUser(next){
   const changed=user?.id!==next?.id;user=next||null;
   $('#login').hidden=!!user;$('#logout').hidden=!user;
   $('#auth-status').textContent=user?'เข้าสู่ระบบแล้ว: '+user.email:'ยังไม่ได้เข้าสู่ระบบ';
+  const admin=user?await isAdmin(client):false;
+  $('#workspace').hidden=!admin;$('#restricted').hidden=!user||admin;
   if(changed){invalidate();page=0;loadCloud();}controls();
 }
 $('#login').onsubmit=async event=>{
@@ -110,7 +113,9 @@ renderLocal();controls();
 try {
   client=createAppClient();
   mountCatalog(client);
+  watchLoginMarks(client);
   client.auth.onAuthStateChange((_event,session)=>{setTimeout(()=>setUser(session?.user),0);});
+  await enforceSessionTtl(client);
   const {data,error}=await client.auth.getUser();
   setUser(error?null:data.user);
   $('#signin').disabled=false;

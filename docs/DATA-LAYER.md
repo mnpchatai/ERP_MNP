@@ -284,3 +284,61 @@ item ก่อน แล้วถ้ามีแถววัตถุดิบ/�
 ประเภทสินค้า FG/RM ทำงานถูกต้อง (ทดสอบตรงผ่าน DOM เพราะฟอร์มถูกซ่อนไว้จนกว่าจะล็อกอิน)
 บังคับเปิด workspace ดูแล้ว layout เรียบร้อย **ยังไม่ได้ทดสอบ insert จริงผ่าน UI ที่ล็อกอิน
 แล้ว** — ผู้ใช้ต้องทดสอบเองในเบราว์เซอร์จริงก่อนใช้งานจริง (ข้อจำกัดเดิมของ sandbox นี้)
+
+## บังคับ login ทุกหน้า + admin-only ชั่วคราว (2026-09-12)
+
+ผู้ใช้เห็นหน้า `index.html` (dashboard จำลอง/SIMULATION) แล้วบ่นว่าเมนู/ปุ่มรกตา และ
+อยากให้ต้อง login ก่อนเข้าใช้งานทุกครั้ง โดยให้สถานะ "ผูกกับ Supabase" (คือมี role
+`admin` ใน `org_user_roles`) เป็นตัวตัดสินว่าเห็นโมดูลได้ — ยังไม่กำหนดว่า role อื่น
+(sales/production/...) เห็นโมดูลไหนได้บ้าง จะกำหนดทีหลัง ระหว่างนี้ให้ซ่อนเมนู/ปุ่ม
+ทั้งหมดไว้ก่อนสำหรับ user ที่ login แล้วแต่ไม่ใช่ admin (ยืนยันกับผู้ใช้ผ่าน
+AskUserQuestion 3 ข้อก่อนเริ่มทำ เพราะกระทบทั้งแอป: ขอบเขต (ทุกหน้า), เกณฑ์ผูก
+(admin เท่านั้น), พฤติกรรมชั่วคราว (ซ่อนทั้งหมด))
+
+**กลไกที่สร้าง**: ไฟล์ใหม่ `auth-gate.mjs` (เพิ่มเข้า `publicFiles` ใน `server.js`
+ด้วย) มี 3 อย่าง:
+1. `enforceSessionTtl(client)` — เก็บเวลา login ล่าสุดใน `localStorage` แยกจาก
+   session ของ Supabase เอง แล้วบังคับ sign out ถ้าเกิน 24 ชม. แม้ refresh token
+   ของ Supabase จะยังไม่หมดอายุก็ตาม (ผู้ใช้ต้องการ "login ซ้ำทุก 24 ชม." แบบตายตัว
+   ไม่ใช่ตามอายุ token จริงของ Supabase)
+2. `watchLoginMarks(client)` — ผูกกับ `onAuthStateChange` เพื่ออัปเดตเวลา login
+   ล่าสุดทุกครั้งที่ sign in/out
+3. `isAdmin(client)` — เรียก RPC `org_is_admin()` (มี `EXECUTE` grant ให้
+   `authenticated` อยู่แล้วตามที่บันทึกไว้ด้านบน)
+
+`supabase-client.mjs` เปลี่ยนจาก `sessionStorage` เป็น `localStorage` สำหรับเก็บ
+session — จำเป็นเพื่อให้ login ครั้งเดียวใช้ข้ามหน้า/แท็บ/reopen browser ได้ภายใน
+24 ชม. ตามที่ผู้ใช้ขอ (ของเดิม session หายทันทีที่ปิดแท็บ)
+
+**หน้าที่แก้**: ทุกหน้า static ที่มีอยู่ (`index.html`+`app.js`,
+`rb.html`+`rb.js`, `mrp.html`+`mrp.js`, `production.html`+`production.js`,
+`connect.html`+`connect.js`) ทุกหน้ามี 3 ส่วนแบบเดียวกันตอนนี้: `#gate`
+(ฟอร์ม login — production.html ใช้ลิงก์ไป `connect.html` แทนเหมือนเดิม),
+`#restricted` (ข้อความ "ยังไม่มีสิทธิ์ใช้งาน" + ปุ่มออกจากระบบ, ไม่มีเมนู/ปุ่มโมดูล
+ให้เห็นเลย), `#workspace` (เนื้อหาเดิมของหน้านั้น ซ่อนไว้จนกว่าจะยืนยันเป็น admin)
+`connect.html` เป็นข้อยกเว้น — เพิ่มแค่ TTL/login-mark ให้สอดคล้องกับหน้าอื่น
+ไม่เพิ่ม `#restricted` เพราะหน้านี้ไม่มีปุ่ม/เมนูโมดูลให้ซ่อน (เป็นแค่หน้า
+ทดสอบการเชื่อมต่อ+login) `mrp-import.html` **ไม่ได้แตะ** — มีระบบ admin ของตัวเอง
+แยกต่างหากอยู่แล้ว (ตาราง `mrp_admins` เดิม คนละระบบกับ `org_user_roles`
+ที่ตั้งใจแยก namespace ไว้ตั้งแต่ต้น) ผสมสองระบบเข้าด้วยกันมีความเสี่ยงเกินความ
+จำเป็นของงานนี้
+
+**ผลข้างเคียงที่ตั้งใจ**: `index.html` (demo/localStorage), `rb.html` (RB
+calculator, เดิมใช้ได้โดยไม่ต้อง login) และ `mrp.html` (เดิมอ่านข้อมูลได้แบบ
+public ด้วย publishable key) ตอนนี้ต้อง login และต้องเป็น admin ถึงจะใช้งานได้
+ทั้งหมด — เป็นผลตามนโยบายที่ผู้ใช้ยืนยัน ไม่ใช่บั๊ก ตอนนี้มี admin จริงแค่คนเดียว
+(`thtwgot@gmail.com` ตามที่บันทึกไว้ด้านบน) จึงยังไม่กระทบ role อื่นเพราะยังไม่มี
+ใครถูก seed role อื่นเลย
+
+**ทดสอบแล้ว**: `npm test` ผ่าน 40/40 headless ทุกหน้า (index/rb/mrp/production/
+connect) ก่อน login แสดง `#gate`, ซ่อน `#restricted`/`#workspace` ถูกต้อง ไม่มี
+console error ใหม่นอกจากที่เกิดจาก sandbox บล็อก `*.supabase.co`/Google Fonts
+เดิม บังคับ toggle เป็นสถานะ "login แล้วแต่ไม่ใช่ admin" และ "admin" ผ่าน DOM
+โดยตรงเพื่อดู layout — เรียบร้อยทั้งสองสถานะ **ยังไม่ได้ทดสอบ flow login จริงผ่าน
+UI** (ข้อจำกัดเดิมของ sandbox) ผู้ใช้ต้องทดสอบเองว่า login แล้วเห็น workspace จริง
+(บัญชี admin) และบัญชีอื่นเห็นแค่ข้อความ "ยังไม่มีสิทธิ์" ก่อนใช้งานจริง
+
+**ยังไม่ทำ** (ผู้ใช้บอกจะกำหนดทีหลัง): ACL ราย role/ราย module (ตอนนี้มีแค่
+admin เห็นทุกอย่าง, role อื่นเห็นเหมือน "ไม่ผูก" คือไม่เห็นอะไรเลย) — ต้องคุยกับ
+ผู้ใช้ว่าจะแบ่ง route/module ให้แต่ละ role (sales/production/purchase/
+accounting/viewer) เห็นอะไรบ้างก่อนค่อยทำต่อ

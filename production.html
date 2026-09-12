@@ -7,8 +7,14 @@
 
 <section class="card" id="gate">
   <h2>ต้องเข้าสู่ระบบก่อน</h2>
-  <p class="muted">หน้านี้อ่าน/เขียนฐานข้อมูลจริงและมี RLS คุ้มครอง ต้องเข้าสู่ระบบด้วยบัญชี Supabase Auth ก่อน</p>
+  <p class="muted">หน้านี้อ่าน/เขียนฐานข้อมูลจริงและมี RLS คุ้มครอง ต้องเข้าสู่ระบบด้วยบัญชี Supabase Auth ก่อน — เข้าสู่ระบบครั้งเดียวใช้ได้ 24 ชั่วโมง</p>
   <a class="primary" href="connect.html" style="display:inline-flex;align-items:center;min-height:38px;padding:7px 16px;border-radius:6px;text-decoration:none">ไปหน้าเข้าสู่ระบบ</a>
+</section>
+
+<section class="card" id="restricted" hidden>
+  <h2>ยังไม่มีสิทธิ์ใช้งาน</h2>
+  <p class="muted">เข้าสู่ระบบสำเร็จ แต่บัญชีนี้ยังไม่ได้รับสิทธิ์ผู้ดูแลระบบ — โมดูลนี้เปิดให้เฉพาะผู้ดูแลก่อน รอกำหนดสิทธิ์เพิ่มเติมภายหลัง</p>
+  <button type="button" id="logout-restricted">ออกจากระบบ</button>
 </section>
 
 <div id="workspace" hidden>

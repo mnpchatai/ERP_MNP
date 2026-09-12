@@ -3,6 +3,7 @@
 // Supabase project. Every table here requires an authenticated session with
 // RLS-granted role — there is no anon-readable path, unlike mrp-data.mjs.
 import {createAppClient, cloudError} from './supabase-client.mjs';
+import {enforceSessionTtl, watchLoginMarks, isAdmin} from './auth-gate.mjs';
 
 const $ = s => document.querySelector(s);
 let client, user = null;
@@ -43,10 +44,14 @@ function stockError(error) {
 }
 
 // ---- auth ---------------------------------------------------------------
-function renderAuth() {
+async function renderAuth() {
   $('#auth-status').textContent = user ? `เข้าสู่ระบบแล้ว: ${user.email}` : 'ยังไม่ได้เข้าสู่ระบบ';
   $('#gate').hidden = !!user;
-  $('#workspace').hidden = !user;
+  if (!user) { $('#restricted').hidden = true; $('#workspace').hidden = true; return; }
+  const admin = await isAdmin(client);
+  $('#restricted').hidden = admin;
+  $('#workspace').hidden = !admin;
+  return admin;
 }
 
 // ---- item master ----------------------------------------------------------
@@ -814,14 +819,15 @@ $('#shopfloor-ops-wrap').addEventListener('click', async event => {
 // ---- boot -------------------------------------------------------------------
 async function boot() {
   client = createAppClient();
-  client.auth.onAuthStateChange((_event, session) => {
+  $('#logout-restricted')?.addEventListener('click', () => client.auth.signOut());
+  watchLoginMarks(client);
+  client.auth.onAuthStateChange(async (_event, session) => {
     user = session?.user ?? null;
-    renderAuth();
-    if (user) loadMaster();
+    if (await renderAuth()) loadMaster();
   });
+  await enforceSessionTtl(client);
   const {data} = await client.auth.getUser();
   user = data?.user ?? null;
-  renderAuth();
-  if (user) await loadMaster();
+  if (await renderAuth()) await loadMaster();
 }
 boot();
