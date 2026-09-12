@@ -10,6 +10,8 @@ let client, user = null;
 let items = [], uoms = [], depts = [];
 let currentBomId = null, bomLines = [];
 let currentRoutingId = null, routingSteps = [];
+let structureBoms = [], structureBomLines = [];
+let structureSelectedItemId = null, structureClipboard = null, structureDialogMode = null;
 
 function toast(message) {
   $('#toast').textContent = message;
@@ -94,6 +96,9 @@ function populateItemPickers() {
   options($('#mo-item'), fgItems, i => i.id, itemLabel, '— เลือกสินค้า —');
   resetLineRows();
   toggleItemLineFieldsets();
+  refreshStructureFilterOptions();
+  runStructureSearch();
+  if (structureSelectedItemId) renderStructureTree();
 }
 
 async function loadMaster() {
@@ -108,6 +113,8 @@ async function loadMaster() {
     if (deptsRes.error) throw deptsRes.error;
     items = itemsRes.data; uoms = uomsRes.data; depts = deptsRes.data;
     renderItems(); populateItemPickers();
+    await loadStructureBoms();
+    if (structureSelectedItemId) renderStructureTree();
     await loadMoList();
     await loadShopfloorMoList();
     await loadStockBalances();
@@ -294,6 +301,372 @@ $('#item-form').addEventListener('submit', async event => {
     await loadMaster();
   } catch (error) { $('#item-status').textContent = cloudError(error); }
   finally { button.disabled = false; }
+});
+
+// ---- Product structure (Class/Type/Group search + multi-level BOM tree) ---
+// There is no separate "structure" table: a node's children are simply its
+// item's own prod_boms/prod_bom_lines (the same tables the flat "วาง BOM"
+// card above uses), walked recursively component-by-component. This mirrors
+// the legacy Ari/Hawaii "โครงสร้างสินค้า" screen's tree without new schema.
+function itemLabelFull(item) { return `${item.code} — ${item.name}`; }
+
+async function loadStructureBoms() {
+  try {
+    const [bomsRes, linesRes] = await Promise.all([
+      client.from('prod_boms').select('id,item_id,version,is_active,created_at').order('created_at', {ascending: false}),
+      client.from('prod_bom_lines').select('id,bom_id,component_item_id,qty_per_unit,scrap_pct,dept_code')
+    ]);
+    if (bomsRes.error) throw bomsRes.error;
+    if (linesRes.error) throw linesRes.error;
+    structureBoms = bomsRes.data; structureBomLines = linesRes.data;
+  } catch (error) { toast(cloudError(error)); structureBoms = []; structureBomLines = []; }
+}
+
+function activeBomForItem(itemId) {
+  const candidates = structureBoms.filter(b => b.item_id === itemId);
+  return candidates.find(b => b.is_active) || candidates[0] || null;
+}
+
+function linesForBom(bomId) { return structureBomLines.filter(l => l.bom_id === bomId); }
+
+// BFS down the BOM tree: true if toItemId is fromItemId itself or one of its
+// components at any depth. Used to block operations that would create a
+// structure cycle (attaching an item under one of its own descendants).
+function itemReachable(fromItemId, toItemId) {
+  const seen = new Set(); const queue = [fromItemId];
+  while (queue.length) {
+    const id = queue.shift();
+    if (id === toItemId) return true;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const bom = activeBomForItem(id);
+    if (!bom) continue;
+    for (const line of linesForBom(bom.id)) queue.push(line.component_item_id);
+  }
+  return false;
+}
+
+function buildStructureNode(itemId, bomLineId, qtyPerUnit, scrapPct, deptCode, ancestors) {
+  const item = items.find(i => i.id === itemId);
+  const node = {itemId, item, bomLineId, qtyPerUnit, scrapPct, deptCode, children: [], cyclic: ancestors.has(itemId)};
+  if (node.cyclic) return node;
+  const bom = activeBomForItem(itemId);
+  if (bom) {
+    const nextAncestors = new Set(ancestors); nextAncestors.add(itemId);
+    for (const line of linesForBom(bom.id)) {
+      node.children.push(buildStructureNode(line.component_item_id, line.id, Number(line.qty_per_unit), Number(line.scrap_pct), line.dept_code, nextAncestors));
+    }
+  }
+  return node;
+}
+
+function renderTreeNode(node, path) {
+  const nodePath = [...path, node.itemId];
+  const container = document.createElement('div');
+  container.className = 'tree-node';
+
+  const row = document.createElement('div');
+  row.className = 'tree-row';
+  if (node.bomLineId && structureClipboard?.bomLineId === node.bomLineId) row.classList.add('cut');
+  row.dataset.itemId = node.itemId;
+  if (node.bomLineId) row.dataset.bomLineId = node.bomLineId;
+  row.dataset.path = nodePath.join(',');
+
+  const toggle = document.createElement('span');
+  toggle.className = 'tree-toggle';
+  toggle.textContent = node.children.length ? '▾' : '';
+  row.append(toggle);
+
+  const code = document.createElement('span'); code.className = 'tree-code'; code.textContent = node.item?.code ?? node.itemId;
+  const name = document.createElement('span'); name.className = 'tree-name';
+  name.textContent = node.cyclic ? `${node.item?.name ?? ''} (โครงสร้างวนกลับ — ข้าม)` : (node.item?.name ?? '');
+  const qty = document.createElement('span'); qty.className = 'tree-qty';
+  if (node.bomLineId) {
+    const scrapText = node.scrapPct ? ` (สูญเสีย ${(node.scrapPct * 100).toLocaleString('th-TH')}%)` : '';
+    qty.textContent = `${node.qtyPerUnit} ${node.item?.uom_code ?? ''}${scrapText}`;
+  }
+  row.append(code, name, qty);
+  container.append(row);
+
+  if (node.children.length && !node.cyclic) {
+    const childWrap = document.createElement('div');
+    childWrap.className = 'tree-children';
+    for (const child of node.children) childWrap.append(renderTreeNode(child, nodePath));
+    container.append(childWrap);
+    toggle.addEventListener('click', () => { childWrap.hidden = !childWrap.hidden; toggle.textContent = childWrap.hidden ? '▸' : '▾'; });
+  }
+  return container;
+}
+
+function renderStructureTree() {
+  const wrap = $('#structure-tree-wrap');
+  if (!structureSelectedItemId) { wrap.replaceChildren(); return; }
+  const tree = buildStructureNode(structureSelectedItemId, null, 1, 0, null, new Set());
+  wrap.replaceChildren(renderTreeNode(tree, []));
+}
+
+// ---- Class/Type/Group cascading search ------------------------------------
+function distinctValues(rows, key, filter) {
+  const set = new Set();
+  for (const row of rows) { if (filter && !filter(row)) continue; if (row[key]) set.add(row[key]); }
+  return [...set].sort((a, b) => a.localeCompare(b, 'th'));
+}
+
+function refreshStructureClassOptions() {
+  options($('#structure-filter-class'), distinctValues(items, 'item_class').map(v => ({v})), r => r.v, r => r.v, 'ทั้งหมด');
+}
+function refreshStructureSubtypeOptions() {
+  const cls = $('#structure-filter-class').value;
+  options($('#structure-filter-subtype'), distinctValues(items, 'item_subtype', i => !cls || i.item_class === cls).map(v => ({v})), r => r.v, r => r.v, 'ทั้งหมด');
+}
+function refreshStructureGroupOptions() {
+  const cls = $('#structure-filter-class').value, subtype = $('#structure-filter-subtype').value;
+  const filter = i => (!cls || i.item_class === cls) && (!subtype || i.item_subtype === subtype);
+  options($('#structure-filter-group'), distinctValues(items, 'item_group', filter).map(v => ({v})), r => r.v, r => r.v, 'ทั้งหมด');
+}
+function refreshStructureFilterOptions() {
+  const cls = $('#structure-filter-class').value, subtype = $('#structure-filter-subtype').value, group = $('#structure-filter-group').value;
+  refreshStructureClassOptions(); refreshStructureSubtypeOptions(); refreshStructureGroupOptions();
+  $('#structure-filter-class').value = cls; $('#structure-filter-subtype').value = subtype; $('#structure-filter-group').value = group;
+}
+
+function renderStructureSearchResults(rows) {
+  const wrap = $('#structure-search-wrap');
+  $('#structure-search-count').textContent = rows.length ? `${rows.length} รายการ` : '';
+  if (!rows.length) {
+    wrap.replaceChildren(Object.assign(document.createElement('p'), {className: 'empty', textContent: 'ไม่พบสินค้าตามเงื่อนไข'}));
+    return;
+  }
+  const table = document.createElement('table');
+  const head = table.createTHead().insertRow();
+  for (const title of ['รหัส', 'ชื่อไทย', 'ชื่ออังกฤษ', 'คลาส', 'ไทป์', 'กรุ๊ป', 'ประเภท']) {
+    const th = document.createElement('th'); th.textContent = title; head.append(th);
+  }
+  const body = table.createTBody();
+  for (const item of rows) {
+    const tr = body.insertRow();
+    tr.dataset.itemId = item.id;
+    if (item.id === structureSelectedItemId) tr.classList.add('selected');
+    tr.insertCell().textContent = item.code;
+    tr.insertCell().textContent = item.name;
+    tr.insertCell().textContent = item.name_en || '';
+    tr.insertCell().textContent = item.item_class || '';
+    tr.insertCell().textContent = item.item_subtype || '';
+    tr.insertCell().textContent = item.item_group || '';
+    tr.insertCell().textContent = item.item_type;
+  }
+  wrap.replaceChildren(table);
+}
+
+function runStructureSearch() {
+  const cls = $('#structure-filter-class').value, subtype = $('#structure-filter-subtype').value, group = $('#structure-filter-group').value;
+  const text = $('#structure-filter-text').value.trim().toLowerCase();
+  const rows = items.filter(i =>
+    (!cls || i.item_class === cls) &&
+    (!subtype || i.item_subtype === subtype) &&
+    (!group || i.item_group === group) &&
+    (!text || i.code.toLowerCase().includes(text) || i.name.toLowerCase().includes(text) || (i.name_en || '').toLowerCase().includes(text))
+  );
+  renderStructureSearchResults(rows);
+}
+
+function selectStructureItem(itemId) {
+  structureSelectedItemId = itemId;
+  structureClipboard = null;
+  const item = items.find(i => i.id === itemId);
+  $('#structure-tree-section').hidden = false;
+  $('#structure-tree-title').textContent = item ? `โครงสร้าง: ${itemLabelFull(item)}` : '';
+  $('#structure-search-wrap').querySelectorAll('tr[data-item-id]').forEach(tr => tr.classList.toggle('selected', tr.dataset.itemId === itemId));
+  renderStructureTree();
+}
+
+$('#structure-filter-class').addEventListener('change', () => { refreshStructureSubtypeOptions(); refreshStructureGroupOptions(); runStructureSearch(); });
+$('#structure-filter-subtype').addEventListener('change', () => { refreshStructureGroupOptions(); runStructureSearch(); });
+$('#structure-filter-group').addEventListener('change', runStructureSearch);
+$('#structure-search-btn').addEventListener('click', runStructureSearch);
+$('#structure-filter-text').addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); runStructureSearch(); } });
+$('#structure-search-clear').addEventListener('click', () => {
+  $('#structure-filter-class').value = ''; $('#structure-filter-subtype').value = ''; $('#structure-filter-group').value = ''; $('#structure-filter-text').value = '';
+  refreshStructureSubtypeOptions(); refreshStructureGroupOptions();
+  runStructureSearch();
+});
+$('#structure-search-wrap').addEventListener('click', event => {
+  const tr = event.target.closest('tr[data-item-id]');
+  if (!tr) return;
+  selectStructureItem(tr.dataset.itemId);
+});
+$('#structure-tree-refresh').addEventListener('click', async () => { await loadStructureBoms(); renderStructureTree(); });
+
+// ---- Right-click context menu on the structure tree ------------------------
+async function ensureBomForItem(itemId) {
+  const existing = activeBomForItem(itemId);
+  if (existing) return existing.id;
+  const {data, error} = await client.from('prod_boms').insert({item_id: itemId, version: 'BOM-01'})
+    .select('id,item_id,version,is_active,created_at').single();
+  if (error) throw error;
+  structureBoms.push(data);
+  return data.id;
+}
+
+// Items that can legally become a component under targetItemId: not the
+// target itself, and not an ancestor of it (that would close a loop).
+function structureComponentCandidates(targetItemId) {
+  return items.filter(i => i.id !== targetItemId && !itemReachable(i.id, targetItemId));
+}
+
+function openStructureLineDialog(mode) {
+  structureDialogMode = mode;
+  const componentSelect = $('#structure-line-component');
+  options($('#structure-line-dept'), depts, d => d.code, deptLabel, '— ไม่ระบุแผนก —');
+  if (mode.type === 'add') {
+    const target = items.find(i => i.id === mode.targetItemId);
+    $('#structure-line-title').textContent = 'เพิ่มโครงสร้างย่อย';
+    $('#structure-line-note').textContent = target ? `เพิ่มชิ้นส่วนภายใต้ ${itemLabelFull(target)}` : '';
+    componentSelect.disabled = false;
+    options(componentSelect, structureComponentCandidates(mode.targetItemId), i => i.id, itemLabelFull, '— เลือกสินค้า/ชิ้นส่วน —');
+    $('#structure-line-qty').value = '1';
+    $('#structure-line-scrap').value = '0';
+    $('#structure-line-dept').value = '';
+  } else {
+    const line = structureBomLines.find(l => l.id === mode.bomLineId);
+    const component = items.find(i => i.id === line?.component_item_id);
+    $('#structure-line-title').textContent = 'แก้ไขจำนวน/สูญเสีย';
+    $('#structure-line-note').textContent = component ? itemLabelFull(component) : '';
+    componentSelect.disabled = true;
+    options(componentSelect, component ? [component] : [], i => i.id, itemLabelFull);
+    if (component) componentSelect.value = component.id;
+    $('#structure-line-qty').value = line?.qty_per_unit ?? '';
+    $('#structure-line-scrap').value = line ? Number(line.scrap_pct) * 100 : '0';
+    $('#structure-line-dept').value = line?.dept_code || '';
+  }
+  $('#structure-line-dialog').showModal();
+}
+
+$('#structure-line-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const dialog = $('#structure-line-dialog');
+  if (event.submitter?.value !== 'ok') { dialog.close(); structureDialogMode = null; return; }
+  const mode = structureDialogMode;
+  const qty = Number($('#structure-line-qty').value);
+  const scrap = (Number($('#structure-line-scrap').value) || 0) / 100;
+  const dept = $('#structure-line-dept').value || null;
+  if (!mode || !Number.isFinite(qty) || qty <= 0) { toast('จำนวนต่อหน่วยต้องมากกว่าศูนย์'); return; }
+  try {
+    if (mode.type === 'add') {
+      const componentId = $('#structure-line-component').value;
+      if (!componentId) { toast('เลือกสินค้า/ชิ้นส่วนก่อน'); return; }
+      const bomId = await ensureBomForItem(mode.targetItemId);
+      const {data, error} = await client.from('prod_bom_lines')
+        .insert({bom_id: bomId, component_item_id: componentId, qty_per_unit: qty, scrap_pct: scrap, dept_code: dept})
+        .select('id,bom_id,component_item_id,qty_per_unit,scrap_pct,dept_code').single();
+      if (error) throw error;
+      structureBomLines.push(data);
+      toast('เพิ่มโครงสร้างย่อยแล้ว');
+    } else {
+      const {error} = await client.from('prod_bom_lines')
+        .update({qty_per_unit: qty, scrap_pct: scrap, dept_code: dept}).eq('id', mode.bomLineId);
+      if (error) throw error;
+      const line = structureBomLines.find(l => l.id === mode.bomLineId);
+      if (line) { line.qty_per_unit = qty; line.scrap_pct = scrap; line.dept_code = dept; }
+      toast('บันทึกการแก้ไขแล้ว');
+    }
+    dialog.close(); structureDialogMode = null;
+    renderStructureTree();
+  } catch (error) { toast(cloudError(error)); }
+});
+
+async function handleStructureCtxAction(action, node) {
+  if (action === 'add') { openStructureLineDialog({type: 'add', targetItemId: node.itemId}); return; }
+  if (action === 'edit') { if (node.bomLineId) openStructureLineDialog({type: 'edit', bomLineId: node.bomLineId}); return; }
+
+  if (action === 'cut') {
+    if (!node.bomLineId) return;
+    const line = structureBomLines.find(l => l.id === node.bomLineId);
+    if (!line) return;
+    structureClipboard = {bomLineId: line.id, componentItemId: line.component_item_id, qtyPerUnit: line.qty_per_unit, scrapPct: line.scrap_pct, deptCode: line.dept_code};
+    toast('ตัดชิ้นส่วนแล้ว — คลิกขวาที่จุดปลายทางแล้วเลือก "วาง"');
+    renderStructureTree();
+    return;
+  }
+
+  if (action === 'paste') {
+    if (!structureClipboard) return;
+    try {
+      const bomId = await ensureBomForItem(node.itemId);
+      const {data, error} = await client.from('prod_bom_lines')
+        .insert({bom_id: bomId, component_item_id: structureClipboard.componentItemId, qty_per_unit: structureClipboard.qtyPerUnit, scrap_pct: structureClipboard.scrapPct, dept_code: structureClipboard.deptCode})
+        .select('id,bom_id,component_item_id,qty_per_unit,scrap_pct,dept_code').single();
+      if (error) throw error;
+      const {error: delError} = await client.from('prod_bom_lines').delete().eq('id', structureClipboard.bomLineId);
+      if (delError) throw delError;
+      structureBomLines = structureBomLines.filter(l => l.id !== structureClipboard.bomLineId);
+      structureBomLines.push(data);
+      structureClipboard = null;
+      toast('ย้ายโครงสร้างแล้ว');
+      renderStructureTree();
+    } catch (error) { toast(cloudError(error)); }
+    return;
+  }
+
+  if (action === 'delete') {
+    if (!node.bomLineId) return;
+    const line = structureBomLines.find(l => l.id === node.bomLineId);
+    const component = items.find(i => i.id === line?.component_item_id);
+    if (!confirm(`ลบ "${component ? itemLabelFull(component) : ''}" ออกจากโครงสร้างนี้? (ตัวสินค้าเองและโครงสร้างย่อยของมันจะไม่ถูกลบ)`)) return;
+    try {
+      const {error} = await client.from('prod_bom_lines').delete().eq('id', node.bomLineId);
+      if (error) throw error;
+      structureBomLines = structureBomLines.filter(l => l.id !== node.bomLineId);
+      if (structureClipboard?.bomLineId === node.bomLineId) structureClipboard = null;
+      toast('ลบแล้ว');
+      renderStructureTree();
+    } catch (error) { toast(cloudError(error)); }
+  }
+}
+
+// Fixed-position menu: an ancestor/page scroll never moves it off the
+// pointer, so only close on an outside click (closing on 'scroll' too was
+// tried and reverted — a layout shift from the menu's own insertion can
+// itself trigger a scroll adjustment, closing the menu a tick after it opens).
+function closeStructureCtxMenu() { $('#structure-ctx-menu').hidden = true; }
+document.addEventListener('click', closeStructureCtxMenu);
+
+$('#structure-tree-wrap').addEventListener('contextmenu', event => {
+  const row = event.target.closest('.tree-row');
+  if (!row) return;
+  event.preventDefault();
+  const node = {itemId: row.dataset.itemId, bomLineId: row.dataset.bomLineId || null};
+  const isRoot = !node.bomLineId;
+  const canPaste = !!structureClipboard
+    && structureClipboard.componentItemId !== node.itemId
+    && structureClipboard.bomLineId !== node.bomLineId
+    && !itemReachable(structureClipboard.componentItemId, node.itemId);
+
+  const menu = $('#structure-ctx-menu');
+  const menuItems = [
+    {label: '➕ เพิ่มโครงสร้างย่อย', action: 'add', disabled: false},
+    {label: '✏️ แก้ไขจำนวน/สูญเสีย', action: 'edit', disabled: isRoot},
+    {label: '✂️ ตัด', action: 'cut', disabled: isRoot},
+    {label: '📋 วาง', action: 'paste', disabled: !canPaste},
+    {label: '🗑 ลบ', action: 'delete', disabled: isRoot, danger: true}
+  ];
+  menu.replaceChildren();
+  for (const mi of menuItems) {
+    const li = document.createElement('li');
+    li.textContent = mi.label;
+    if (mi.disabled) {
+      li.setAttribute('aria-disabled', 'true');
+    } else {
+      if (mi.danger) li.classList.add('danger');
+      li.addEventListener('click', () => { menu.hidden = true; handleStructureCtxAction(mi.action, node); });
+    }
+    menu.append(li);
+  }
+  menu.hidden = false;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const rect = menu.getBoundingClientRect();
+  menu.style.left = `${Math.max(4, Math.min(event.clientX, vw - rect.width - 8))}px`;
+  menu.style.top = `${Math.max(4, Math.min(event.clientY, vh - rect.height - 8))}px`;
 });
 
 // ---- Stock balances ---------------------------------------------------------

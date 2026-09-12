@@ -99,6 +99,25 @@
   </form>
 </section>
 
+<section class="card" id="structure-card">
+  <div class="head"><h2>โครงสร้างสินค้า (BOM หลายชั้น)</h2><span class="muted" id="structure-search-count"></span></div>
+  <p class="muted small">ค้นหาสินค้าด้วย คลาส / ไทป์ / กรุ๊ป หรือรหัส/ชื่อ แล้วคลิกที่รายการเพื่อเปิดโครงสร้าง — คลิกขวาที่แต่ละจุดในโครงสร้างเพื่อ เพิ่ม/แก้ไข/ตัด/วาง/ลบ ชิ้นส่วน</p>
+  <div class="structure-search-bar">
+    <label>คลาส<select id="structure-filter-class"><option value="">ทั้งหมด</option></select></label>
+    <label>ไทป์<select id="structure-filter-subtype"><option value="">ทั้งหมด</option></select></label>
+    <label>กรุ๊ป<select id="structure-filter-group"><option value="">ทั้งหมด</option></select></label>
+    <label class="wide">ค้นหา (รหัส/ชื่อ)<input id="structure-filter-text" placeholder="พิมพ์รหัสหรือชื่อสินค้าแล้วกด Enter…"></label>
+    <div class="actions"><button type="button" id="structure-search-btn" class="primary">ค้นหา</button><button type="button" id="structure-search-clear">ล้างตัวกรอง</button></div>
+  </div>
+  <div class="scroll" id="structure-search-wrap"><p class="empty">กำลังโหลด…</p></div>
+
+  <div id="structure-tree-section" hidden>
+    <div class="head" style="margin-top:18px"><h3 id="structure-tree-title"></h3><button type="button" id="structure-tree-refresh">รีโหลดโครงสร้าง</button></div>
+    <p class="muted small">คลิกขวาที่แต่ละแถวเพื่อเปิดเมนู เพิ่ม/แก้ไข/ตัด/วาง/ลบ ชิ้นส่วนย่อยของจุดนั้น</p>
+    <div class="scroll" id="structure-tree-wrap"></div>
+  </div>
+</section>
+
 <section class="card" id="bom-card">
   <div class="head"><h2>วาง BOM (แก้ไข/เพิ่มเวอร์ชันใหม่)</h2></div>
   <div class="mrp-grid">
@@ -164,6 +183,15 @@
 </section>
 </div>
 </main>
+<dialog id="structure-line-dialog"><form method="dialog" id="structure-line-form">
+  <div class="head"><div><h2 id="structure-line-title">เพิ่มโครงสร้างย่อย</h2><p class="muted" id="structure-line-note"></p></div><button value="cancel" type="submit" formnovalidate>✕</button></div>
+  <label>สินค้า/ชิ้นส่วน<select id="structure-line-component" required></select></label>
+  <label>จำนวนต่อหน่วย<input id="structure-line-qty" type="number" min="0" step="any" required></label>
+  <label>สูญเสีย (%)<input id="structure-line-scrap" type="number" min="0" max="100" step="any" value="0"></label>
+  <label>แผนกที่ใช้<select id="structure-line-dept"></select></label>
+  <button value="ok" type="submit" class="primary wide">บันทึก</button>
+</form></dialog>
+<ul id="structure-ctx-menu" class="ctx-menu" hidden></ul>
 <div id="toast" role="status" aria-live="polite"></div>
 <script src="vendor/supabase.js"></script>
 <script src="theme.js"></script>
