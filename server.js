@@ -14,7 +14,7 @@ const types = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=
 const publicFiles = new Set(['index.html','app.js','styles.css','theme.css','theme.js','rb.html','rb.js','rb.css','rb-calc.mjs','connect.html','connect.js','public-config.js','supabase-client.mjs','rb-cloud.mjs','rb-catalog.mjs','catalog.css',
   'mrp.html','mrp.js','mrp.css','mrp-data.mjs','mrp-csv.mjs','mrp-import.html','mrp-import.js',
   'bom-import.html','bom-import.js','production.html','production.js','production.css',
-  'structure.html','structure.js','structure.css','auth-gate.mjs']);
+  'structure.html','structure.js','structure.css','auth-gate.mjs','factory.css']);
 
 http.createServer((request, response) => {
   response.setHeader('X-Content-Type-Options','nosniff');

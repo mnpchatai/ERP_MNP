@@ -1,0 +1,54 @@
+/* ฝ่ายโรงงาน (index.html) — the sidebar department group, the department picker
+   and the per-department workspace. Loaded after theme.css, so the nav rules are
+   written with the #nav prefix to outrank theme.css's own "#nav button" rule. */
+
+/* --- sidebar: ฝ่ายโรงงาน group ----------------------------------------- */
+#nav .nav-chevron{width:16px;height:16px;flex-basis:16px;margin-left:2px;transition:transform .15s}
+#nav button.nav-parent.open .nav-chevron{transform:rotate(90deg)}
+#nav .nav-submenu{display:flex;flex-direction:column;gap:2px;margin:2px 0 2px 13px;padding-left:11px;border-left:1px solid var(--line)}
+#nav .nav-submenu[hidden]{display:none}
+#nav .nav-submenu button{min-height:38px;gap:9px;padding:6px 10px;font-size:.8125rem}
+#nav .nav-submenu .dept-chip{min-width:31px;height:21px;padding:0 6px;font-size:.6875rem}
+#nav .nav-submenu button.active .dept-chip{background:#ffffff2e;color:#fff}
+
+/* --- department picker --------------------------------------------------- */
+.dept-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(212px,1fr));gap:14px;margin-top:4px}
+button.dept-card{display:flex;flex-direction:column;align-items:stretch;gap:9px;width:100%;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-weight:400;text-align:left}
+button.dept-card:hover:not(:disabled){border-color:#1769e8;background:#f5f9ff;box-shadow:0 4px 14px #1769e814}
+.dept-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.dept-card-name{font-size:1rem;font-weight:600;color:#1e293b}
+.dept-card-sub{font-size:.8125rem;color:var(--muted)}
+.dept-card-meta{display:flex;flex-wrap:wrap;gap:4px 14px;padding-top:10px;border-top:1px solid var(--line);font-size:.75rem;color:var(--muted)}
+.dept-card-meta>span{display:inline-flex;align-items:center;gap:5px}
+.dept-card-meta .icon{width:15px;height:15px;flex-basis:15px}
+
+.dept-chip{display:inline-flex;align-items:center;justify-content:center;min-width:38px;height:26px;padding:0 9px;border-radius:7px;background:#edf4ff;color:#1763c8;font-size:.8125rem;font-weight:700;letter-spacing:.5px}
+.dept-flag{padding:2px 9px;border-radius:20px;background:#edf8f1;color:#23764b;font-size:.6875rem;white-space:nowrap}
+.dept-flag.off{background:#f1f4f9;color:var(--muted)}
+
+/* --- department workspace ------------------------------------------------ */
+.stat .stat-text{display:inline-block;padding-top:6px;font-size:1.125rem;font-weight:600;line-height:1.4}
+.icon-back{transform:scaleX(-1)}
+.dept-links{display:grid;gap:10px}
+.dept-links a,.dept-links button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:12px 15px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:inherit;font-weight:400;text-align:left;text-decoration:none}
+.dept-links a:hover,.dept-links button:hover:not(:disabled){border-color:#1769e8;background:#f5f9ff}
+.dept-links b{display:block;font-size:.875rem;font-weight:600}
+.dept-links small{display:block;font-size:.75rem;color:var(--muted)}
+.dept-links .icon{color:#1763c8}
+.dept-state{margin:0 0 14px;font-size:.875rem;color:var(--muted)}
+.dept-state.good{margin-bottom:0;color:#23764b}
+
+/* --- dark mode ----------------------------------------------------------- */
+[data-theme="dark"] #nav .nav-submenu{border-left-color:#1b2536}
+[data-theme="dark"] button.dept-card{background:#111c2e;border-color:#243043}
+[data-theme="dark"] button.dept-card:hover:not(:disabled){background:#152238;border-color:#3b82f6;box-shadow:none}
+[data-theme="dark"] .dept-card-name{color:#e2e8f0}
+[data-theme="dark"] .dept-chip{background:#15304f;color:#5b9dff}
+[data-theme="dark"] .dept-flag{background:#102b1f;color:#4ade80}
+[data-theme="dark"] .dept-flag.off{background:#1b2536;color:#8fa3bb}
+[data-theme="dark"] .dept-links a,[data-theme="dark"] .dept-links button{background:#111c2e;border-color:#243043;color:#cbd5e1}
+[data-theme="dark"] .dept-links a:hover,[data-theme="dark"] .dept-links button:hover:not(:disabled){background:#152238;border-color:#3b82f6}
+[data-theme="dark"] .dept-links b{color:#e2e8f0}
+[data-theme="dark"] .dept-links .icon{color:#5b9dff}
+[data-theme="dark"] .dept-state.good{color:#4ade80}
+[data-theme="dark"] .stat .stat-text{color:#e2e8f0}

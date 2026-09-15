@@ -11,6 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="factory.css">
 </head>
 <body>
 <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
@@ -27,6 +28,7 @@
   <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v1"/></symbol>
   <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 10a9 9 0 1 1 2 8M3 4v6h6"/></symbol>
   <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
   <symbol id="i-connect" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v7c0 4 16 4 16 0V5M4 12v7c0 4 16 4 16 0v-7"/></symbol>
 </defs></svg>
 <a class="skip-link" href="#content">ข้ามไปยังเนื้อหา</a>
@@ -69,6 +71,18 @@
       <button data-view="production"><svg class="icon" aria-hidden="true"><use href="#i-factory"/></svg><span>ใบสั่งผลิต</span></button>
       <button data-view="shopfloor"><svg class="icon" aria-hidden="true"><use href="#i-activity"/></svg><span>หน้างานผลิต</span></button>
       <a class="nav-link" href="mrp.html"><svg class="icon" aria-hidden="true"><use href="#i-calc"/></svg><span>คำนวณวัตถุดิบ <small>MRP</small></span></a>
+      <span class="nav-caption">ฝ่ายโรงงาน</span>
+      <button data-view="factory" class="nav-parent" aria-expanded="false" aria-controls="factory-submenu"><svg class="icon" aria-hidden="true"><use href="#i-factory"/></svg><span>ฝ่ายโรงงาน</span><span class="nav-count" id="factory-count"></span><svg class="icon nav-chevron" aria-hidden="true"><use href="#i-chevron"/></svg></button>
+      <div class="nav-submenu" id="factory-submenu" role="group" aria-label="แผนกในฝ่ายโรงงาน" hidden>
+        <button data-view="factory" data-dept="RB"><span class="dept-chip">RB</span><span>แผนก RB</span></button>
+        <button data-view="factory" data-dept="GR"><span class="dept-chip">GR</span><span>แผนก GR</span></button>
+        <button data-view="factory" data-dept="PT"><span class="dept-chip">PT</span><span>แผนก PT</span></button>
+        <button data-view="factory" data-dept="BG"><span class="dept-chip">BG</span><span>แผนก BG</span></button>
+        <button data-view="factory" data-dept="PK"><span class="dept-chip">PK</span><span>แผนก PK</span></button>
+        <button data-view="factory" data-dept="ST"><span class="dept-chip">ST</span><span>แผนก ST</span></button>
+        <button data-view="factory" data-dept="SR"><span class="dept-chip">SR</span><span>แผนก SR</span></button>
+        <button data-view="factory" data-dept="WH"><span class="dept-chip">WH</span><span>แผนก WH</span></button>
+      </div>
       <span class="nav-caption">ข้อมูลหลักและคลังสินค้า</span>
       <a class="nav-link" href="production.html"><svg class="icon" aria-hidden="true"><use href="#i-connect"/></svg><span>Item / BOM <small>ข้อมูลจริง</small></span></a>
       <a class="nav-link" href="structure.html"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span>โครงสร้างสินค้า <small>Item Master</small></span></a>
